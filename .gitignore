@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Local environment. Only .env.example is committed.
+.env
+.env.local
+.env*.local
+
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

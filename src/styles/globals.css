@@ -1,0 +1,366 @@
+@import 'tailwindcss';
+
+/*
+  Design system (spec §53).
+
+  Layout rhythm, type scale and product-grid proportions follow the visual
+  reference: generous outer padding, wide gutters, 2:3 portrait product images,
+  near-square corners, hairline rules, no shadows. The palette is our own.
+
+  Accessibility note: the brand sage #838E5E measures only 3.50:1 on white —
+  fine for large display type, borders and icons, but it fails WCAG AA for body
+  text. Anything small or interactive uses sage-700 (#5B6241, 6.43:1). Do not
+  swap those around.
+*/
+@theme {
+  --color-sage-50: #f7f8f4;
+  --color-sage-100: #edefe6;
+  --color-sage-200: #dbdece;
+  --color-sage-300: #bfc6a9;
+  --color-sage-400: #a4ae84;
+  --color-sage-500: #838e5e;
+  --color-sage-600: #717b51;
+  --color-sage-700: #5b6241;
+  --color-sage-800: #444a31;
+  --color-sage-900: #2d3121;
+
+  --color-ink: #212121;
+  --color-ink-soft: #646464;
+  --color-cream: #faf8f3;
+  --color-shell: #f7f6f4;
+  --color-hairline: #f0f0f0;
+  --color-rule: #e3e1dc;
+
+  --color-sale: #b4553c;
+  --color-success: #2f6b4f;
+  --color-warning: #9a6b1f;
+  --color-danger: #a33a2a;
+
+  --font-display: var(--font-display-serif), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-body-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-brand: 3px;
+
+  --spacing-outer: 50px;
+  --spacing-outer-md: 30px;
+  --spacing-outer-sm: 16px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+::selection {
+  background: var(--color-sage-200);
+  color: var(--color-sage-900);
+}
+
+/* ------------------------------------------------------------ containers */
+
+.container-pk {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 1680px;
+  padding-inline: var(--spacing-outer-sm);
+}
+@media (min-width: 768px) {
+  .container-pk {
+    padding-inline: var(--spacing-outer-md);
+  }
+}
+@media (min-width: 1280px) {
+  .container-pk {
+    padding-inline: var(--spacing-outer);
+  }
+}
+
+.container-narrow {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 760px;
+  padding-inline: var(--spacing-outer-sm);
+}
+
+/* ------------------------------------------------------------ typography */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+
+.eyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.label-caps {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Hairline with dot terminals — the divider motif from the brand mark. */
+.rule-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.rule-dot::before,
+.rule-dot::after {
+  content: '';
+  height: 1px;
+  width: clamp(2rem, 8vw, 5rem);
+  background: linear-gradient(to right, transparent, var(--color-sage-400));
+}
+.rule-dot::after {
+  background: linear-gradient(to left, transparent, var(--color-sage-400));
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-brand);
+  padding: 0.95rem 2rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-sm {
+  padding: 0.6rem 1.15rem;
+  font-size: 0.7rem;
+}
+
+.btn-primary {
+  background: var(--color-sage-700);
+  color: #fff;
+  border: 1px solid var(--color-sage-700);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-sage-800);
+  border-color: var(--color-sage-800);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-ink);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-rule);
+}
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--color-ink);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------- inputs */
+
+.field {
+  width: 100%;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-brand);
+  background: #fff;
+  padding: 0.8rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+  transition: border-color 160ms ease;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-sage-600);
+}
+.field:disabled {
+  background: var(--color-shell);
+  cursor: not-allowed;
+}
+.field-error {
+  border-color: var(--color-danger);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+}
+
+.field-hint {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+}
+.field-message {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-danger);
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+  border-bottom: 1px solid var(--color-rule);
+  white-space: nowrap;
+}
+.table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--color-hairline);
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: var(--color-sage-50);
+}
+
+/* ---------------------------------------------------------------- badges */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-brand);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.badge-neutral {
+  background: var(--color-shell);
+  color: var(--color-ink-soft);
+}
+.badge-success {
+  background: #e8f0ea;
+  color: var(--color-success);
+}
+.badge-warning {
+  background: #f6efdf;
+  color: var(--color-warning);
+}
+.badge-danger {
+  background: #f6e6e2;
+  color: var(--color-danger);
+}
+.badge-info {
+  background: var(--color-sage-100);
+  color: var(--color-sage-800);
+}
+
+/* ------------------------------------------------------------------ misc */
+
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  transition: background-size 260ms ease;
+}
+.link-underline:hover {
+  background-size: 100% 1px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-shell) 25%, #efeeea 37%, var(--color-shell) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.fade-up {
+  animation: fadeUp 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
