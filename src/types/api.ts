@@ -227,3 +227,30 @@ export type HomeSection =
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'category-banner'; heading: string; slugs: string[] }
   | { type: 'newsletter'; heading: string; body: string }
+  | { type: 'showcase'; heading: string; body?: string; limit?: number }
+
+/**
+ * A customer photo or clip on the showcase wall.
+ *
+ * Deliberately does not carry the consent fields the admin sees — how
+ * permission was obtained is an internal record, not something the storefront
+ * needs or should receive.
+ */
+export interface ShowcaseItem {
+  id: string
+  mediaType: 'VIDEO' | 'IMAGE'
+  mediaUrl: string
+  posterUrl: string | null
+  altText: string
+  caption: string | null
+  creditName: string | null
+  creditHandle: string | null
+  products: Array<{
+    id: string
+    name: string
+    slug: string
+    price: number
+    compareAtPrice: number | null
+    image: string | null
+  }>
+}

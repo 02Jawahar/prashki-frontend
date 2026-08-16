@@ -3,6 +3,7 @@ import type {
   Category,
   ProductDetail,
   ProductListItem,
+  ShowcaseItem,
   StoreSettings,
 } from '@/types/api'
 
@@ -74,6 +75,9 @@ export const productService = {
     serverApiGetOrNull<{ category: Category & { children: Category[] } }>(`/categories/${slug}`),
 
   settings: () => serverApiGet<{ settings: StoreSettings }>('/settings'),
+
+  /** The customer showcase wall. Public and cached at the API. */
+  showcase: (limit = 8) => serverApiGet<{ items: ShowcaseItem[] }>(`/showcase?limit=${limit}`),
 }
 
 /** Browser-side reads, e.g. the search overlay. */

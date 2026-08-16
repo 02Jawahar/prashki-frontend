@@ -773,6 +773,66 @@ export const auditService = {
       .then((r) => ({ ...r.data, pagination: r.pagination as Pagination })),
 }
 
+// ----------------------------------------------------- customer showcase
+
+export interface AdminShowcaseItem {
+  id: string
+  mediaType: 'VIDEO' | 'IMAGE'
+  mediaUrl: string
+  posterUrl: string | null
+  altText: string
+  caption: string | null
+  creditName: string | null
+  creditHandle: string | null
+  sourceUrl: string | null
+  consentGrantedAt: string | null
+  consentNote: string | null
+  status: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'ARCHIVED'
+  scheduledFor: string | null
+  publishedAt: string | null
+  position: number
+  products: Array<{
+    position: number
+    product: { id: string; name: string; slug: string; status: string }
+  }>
+}
+
+export interface ShowcaseInput {
+  mediaType?: 'VIDEO' | 'IMAGE'
+  mediaUrl?: string
+  posterUrl?: string | null
+  altText?: string
+  caption?: string | null
+  creditName?: string | null
+  creditHandle?: string | null
+  sourceUrl?: string | null
+  consentGrantedAt?: string | null
+  consentNote?: string | null
+  status?: 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'ARCHIVED'
+  scheduledFor?: string | null
+  productIds?: string[]
+}
+
+export const showcaseService = {
+  list: (query: { status?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ items: AdminShowcaseItem[] }>(`/admin/showcase${qs(query)}`)
+      .then((r) => ({ ...r.data, pagination: r.pagination as Pagination })),
+
+  create: (input: ShowcaseInput) =>
+    apiClient.post<{ item: AdminShowcaseItem }>('/admin/showcase', input).then((r) => r.data.item),
+
+  update: (id: string, input: ShowcaseInput) =>
+    apiClient
+      .patch<{ item: AdminShowcaseItem }>(`/admin/showcase/${id}`, input)
+      .then((r) => r.data.item),
+
+  remove: (id: string) => apiClient.delete(`/admin/showcase/${id}`),
+
+  reorder: (ids: string[]) =>
+    apiClient.patch<{ reordered: number }>('/admin/showcase/reorder', { ids }).then((r) => r.data),
+}
+
 // ------------------------------------------------- webhook failure queue
 
 export interface WebhookEventRecord {

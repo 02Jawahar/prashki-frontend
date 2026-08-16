@@ -5,6 +5,7 @@ import { productService } from '@/services/product.service'
 import { ProductGrid, SectionHeading } from '@/components/storefront/product-card'
 import { SectionMedia } from '@/components/storefront/section-media'
 import { NewsletterForm } from '@/components/storefront/newsletter-form'
+import { ShowcaseWall } from '@/components/storefront/showcase-wall'
 import type { Category, HomeSection, ProductListItem, StoreSettings } from '@/types/api'
 
 export const metadata: Metadata = {
@@ -26,11 +27,18 @@ export default async function HomePage() {
 
   const sections = settings['home.sections'] ?? []
 
-  // Resolve every product list the page needs in one pass.
-  const [featured, newest, categories] = await Promise.all([
+  // Only fetch the showcase when a section actually asks for it — an empty
+  // wall is one request the homepage does not need to make.
+  const wantsShowcase = sections.some((section) => section.type === 'showcase')
+
+  // Resolve every list the page needs in one pass.
+  const [featured, newest, categories, showcase] = await Promise.all([
     productService.list({ sort: 'featured', perPage: 4 }).then((r) => r.data.products).catch(() => []),
     productService.list({ sort: 'newest', perPage: 8 }).then((r) => r.data.products).catch(() => []),
     productService.categories().then((r) => r.data.categories).catch(() => []),
+    wantsShowcase
+      ? productService.showcase(8).then((r) => r.data.items).catch(() => [])
+      : Promise.resolve([]),
   ])
 
   return (
@@ -58,6 +66,15 @@ export default async function HomePage() {
             return <Banner key={i} data={section} flip={i % 2 === 1} />
           case 'category-banner':
             return <CategoryStrip key={i} heading={section.heading} slugs={section.slugs} categories={categories} />
+          case 'showcase':
+            return (
+              <ShowcaseWall
+                key={i}
+                items={showcase.slice(0, section.limit ?? 8)}
+                heading={section.heading}
+                body={section.body}
+              />
+            )
           case 'newsletter':
             return (
               <section key={i} className="bg-sage-50 py-16 md:py-20">
