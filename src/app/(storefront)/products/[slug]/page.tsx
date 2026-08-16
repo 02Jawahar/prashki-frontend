@@ -8,6 +8,7 @@ import { ProductGrid, SectionHeading } from '@/components/storefront/product-car
 import { ProductReviews } from '@/components/storefront/product-reviews'
 import { WishlistButton } from '@/components/storefront/wishlist-button'
 import { PinChecker } from '@/components/storefront/pin-checker'
+import { SizeGuide } from '@/components/storefront/size-guide'
 import { formatPrice } from '@/lib/money'
 
 export async function generateMetadata({
@@ -52,22 +53,78 @@ export default async function ProductDetailPage({
 
   const { product, related } = res.data
 
-  // Structured data so the listing is machine-readable (spec §57).
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3100'
+
+  /**
+   * Structured data (FR-23.2): the product, the breadcrumb trail, and the
+   * organisation behind it. Emitted as one @graph rather than three separate
+   * blocks so the nodes can reference each other.
+   *
+   * Only values that are actually visible on the page are described — a rating
+   * we do not show, or a review count of zero, is not asserted.
+   */
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.name,
-    description: product.description,
-    sku: product.sku,
-    image: product.images.map((i) => i.url),
-    offers: {
-      '@type': 'Offer',
-      price: (product.price / 100).toFixed(2),
-      priceCurrency: 'INR',
-      availability: product.inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-    },
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${site}/#organization`,
+        name: 'Prash & Ki',
+        url: site,
+        logo: `${site}/brand/logo-sage.png`,
+      },
+      {
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        sku: product.sku,
+        image: product.images.map((i) => i.url),
+        ...(product.material ? { material: product.material } : {}),
+        ...(product.category ? { category: product.category.name } : {}),
+        brand: { '@id': `${site}/#organization` },
+        offers: {
+          '@type': 'Offer',
+          url: `${site}/products/${product.slug}`,
+          price: (product.price / 100).toFixed(2),
+          priceCurrency: 'INR',
+          availability: product.inStock
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+        },
+        // Asserted only when there are approved reviews behind it.
+        ...(product.ratingCount > 0
+          ? {
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: product.ratingAverage,
+                reviewCount: product.ratingCount,
+              },
+            }
+          : {}),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: site },
+          ...(product.category
+            ? [
+                {
+                  '@type': 'ListItem',
+                  position: 2,
+                  name: product.category.name,
+                  item: `${site}/categories/${product.category.slug}`,
+                },
+              ]
+            : []),
+          {
+            '@type': 'ListItem',
+            position: product.category ? 3 : 2,
+            name: product.name,
+            item: `${site}/products/${product.slug}`,
+          },
+        ],
+      },
+    ],
   }
 
   return (
@@ -114,6 +171,10 @@ export default async function ProductDetailPage({
               productName={product.name}
               className="mt-3 w-full"
             />
+
+            <div className="mt-4 flex items-center gap-5">
+              <SizeGuide />
+            </div>
 
             <PinChecker />
 

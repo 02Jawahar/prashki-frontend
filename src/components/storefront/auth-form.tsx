@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
@@ -29,6 +30,8 @@ export function AuthForm({
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -45,7 +48,14 @@ export function AuthForm({
       if (mode === 'login') {
         await login(email, password)
       } else {
-        await register({ name, email, password, phone: phone || undefined })
+        await register({
+          name,
+          email,
+          password,
+          phone: phone || undefined,
+          acceptedTerms,
+          marketingOptIn,
+        })
       }
 
       await refreshCart()
@@ -128,7 +138,56 @@ export function AuthForm({
         />
       </Field>
 
-      <Button type="submit" loading={submitting} className="w-full">
+      {mode === 'register' && (
+        <div className="space-y-3 pt-1">
+          {/*
+            Consent is captured, timestamped and versioned server-side. The
+            marketing box is deliberately unticked: a pre-ticked one is not
+            consent, and the DPDP Act is written against exactly that.
+          */}
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              required
+              className="mt-0.5 size-4 accent-[#5b6241]"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+            />
+            <span className="text-ink-soft">
+              I accept the{' '}
+              <Link href="/terms" className="link-underline text-ink" target="_blank">
+                terms
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy-policy" className="link-underline text-ink" target="_blank">
+                privacy policy
+              </Link>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-[#5b6241]"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+            />
+            <span className="text-ink-soft">
+              Email me about new collections and studio news
+              <span className="mt-0.5 block text-xs">
+                Optional. Order updates are sent either way.
+              </span>
+            </span>
+          </label>
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        loading={submitting}
+        disabled={mode === 'register' && !acceptedTerms}
+        className="w-full"
+      >
         {submitting ? 'Please wait' : mode === 'login' ? 'Sign in' : 'Create account'}
       </Button>
     </form>

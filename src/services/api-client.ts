@@ -69,6 +69,37 @@ async function refreshSession(): Promise<boolean> {
   return refreshInFlight
 }
 
+/**
+ * The CSRF token the API issued, copied from the cookie into a header.
+ *
+ * The cookie is deliberately readable by JavaScript — that is the point of a
+ * double-submit token. An attacker's page can make the browser *send* our
+ * cookie but cannot read it to build this header, which is what the check on
+ * the server relies on.
+ */
+function csrfToken(): string | null {
+  if (typeof document === 'undefined') return null
+
+  const match = document.cookie.match(/(?:^|;\s*)csrf=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+let primingInFlight: Promise<string | null> | null = null
+
+/** Single-flight, so a burst of writes on a cold tab triggers one round trip. */
+async function primeCsrfToken(): Promise<string | null> {
+  primingInFlight ??= fetch(`${BROWSER_BASE}/`, { credentials: 'include' })
+    .then(() => csrfToken())
+    .catch(() => null)
+    .finally(() => {
+      setTimeout(() => {
+        primingInFlight = null
+      }, 0)
+    })
+
+  return primingInFlight
+}
+
 async function browserRequest<T>(
   path: string,
   { method = 'GET', body, isFormData = false, retry = true }: {
@@ -80,6 +111,13 @@ async function browserRequest<T>(
 ): Promise<Result<T>> {
   const headers: Record<string, string> = { accept: 'application/json' }
   if (body !== undefined && !isFormData) headers['content-type'] = 'application/json'
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    // The token arrives on the first response from the API. If the very first
+    // thing this tab does is a write, prime it rather than failing the write.
+    const token = csrfToken() ?? (await primeCsrfToken())
+    if (token) headers['x-csrf-token'] = token
+  }
 
   const res = await fetch(`${BROWSER_BASE}${path}`, {
     method,

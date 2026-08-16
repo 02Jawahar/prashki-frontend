@@ -2,7 +2,14 @@ import { apiClient } from './api-client'
 import type { AuthUser } from '@/types/api'
 
 export const authService = {
-  register: (input: { name: string; email: string; password: string; phone?: string }) =>
+  register: (input: {
+    name: string
+    email: string
+    password: string
+    phone?: string
+    acceptedTerms: boolean
+    marketingOptIn?: boolean
+  }) =>
     apiClient.post<{ user: AuthUser }>('/auth/register', input).then((r) => r.data.user),
 
   login: (input: { email: string; password: string }) =>

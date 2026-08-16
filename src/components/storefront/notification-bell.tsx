@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { Bell } from 'lucide-react'
+import { Bell, X } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { notificationService, type Notification } from '@/services/storefront.service'
 import { formatDate } from '@/lib/utils'
@@ -72,6 +72,20 @@ export function NotificationBell() {
     await notificationService.markAllRead().catch(() => undefined)
   }
 
+  /** Removes everything already seen, leaving anything unread in place. */
+  async function clearRead() {
+    setItems((current) => current.filter((item) => !item.readAt))
+    await notificationService.clearRead().catch(() => undefined)
+  }
+
+  async function clearOne(id: string) {
+    const removed = items.find((item) => item.id === id)
+    setItems((current) => current.filter((item) => item.id !== id))
+    if (removed && !removed.readAt) setUnread((n) => Math.max(0, n - 1))
+
+    await notificationService.clear(id).catch(() => undefined)
+  }
+
   if (!user) return null
 
   return (
@@ -93,17 +107,28 @@ export function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 top-9 z-50 w-80 border border-rule bg-paper shadow-lg">
-          <header className="flex items-center justify-between border-b border-hairline px-4 py-3">
+          <header className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-3">
             <p className="label-caps">Notifications</p>
-            {unread > 0 && (
-              <button
-                type="button"
-                onClick={() => void markAllRead()}
-                className="text-xs text-sage-700 underline"
-              >
-                Mark all read
-              </button>
-            )}
+            <div className="flex gap-3">
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void markAllRead()}
+                  className="text-xs text-sage-700 underline"
+                >
+                  Mark all read
+                </button>
+              )}
+              {items.some((item) => item.readAt) && (
+                <button
+                  type="button"
+                  onClick={() => void clearRead()}
+                  className="text-xs text-ink-soft underline hover:text-ink"
+                >
+                  Clear read
+                </button>
+              )}
+            </div>
           </header>
 
           <div className="max-h-96 overflow-y-auto">
@@ -125,8 +150,17 @@ export function NotificationBell() {
                   return (
                     <li
                       key={item.id}
-                      className={`border-b border-hairline last:border-0 ${item.readAt ? '' : 'bg-sage-50'}`}
+                      className={`group relative border-b border-hairline last:border-0 ${item.readAt ? '' : 'bg-sage-50'}`}
                     >
+                      <button
+                        type="button"
+                        onClick={() => void clearOne(item.id)}
+                        aria-label="Clear this notification"
+                        className="absolute right-2 top-2 z-10 p-1 text-ink-soft opacity-0 hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
+                      >
+                        <X className="size-3.5" strokeWidth={1.6} />
+                      </button>
+
                       {item.link ? (
                         <Link
                           href={item.link}

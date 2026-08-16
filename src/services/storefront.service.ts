@@ -192,6 +192,24 @@ export const returnService = {
       }>(`/returns/eligibility/${orderId}`)
       .then((r) => r.data),
 
+  /**
+   * Uploads evidence photos and returns their URLs (FR-22.2). Uploaded before
+   * the request is created, so a customer can see what they attached before
+   * committing to anything.
+   */
+  uploadEvidence: (files: File[]) => {
+    const form = new FormData()
+    for (const file of files) form.append('images', file)
+    return apiClient
+      .upload<{ images: Array<{ url: string; key: string }> }>('/returns/evidence', form)
+      .then((r) => r.data.images)
+  },
+
+  uploadLimits: () =>
+    apiClient
+      .get<{ maxFileBytes: number; maxFiles: number; allowed: string[] }>('/returns/upload-limits')
+      .then((r) => r.data),
+
   create: (input: {
     orderId: string
     reason: string
@@ -220,6 +238,11 @@ export interface WishlistItem {
   addedAt: string
   available: boolean
   inStock: boolean
+  /**
+   * Set only when there is no choice to make — the saved variant, or the
+   * product's single purchasable one. Null means "go and pick a size".
+   */
+  addableVariantId: string | null
   price: number
   compareAtPrice: number | null
   discountPercent: number
@@ -318,8 +341,19 @@ export const notificationService = {
   markRead: (id: string) =>
     apiClient.post<{ read: boolean; unread: number }>(`/notifications/${id}/read`).then((r) => r.data),
 
+  markUnread: (id: string) =>
+    apiClient.post<{ read: boolean; unread: number }>(`/notifications/${id}/unread`).then((r) => r.data),
+
   markAllRead: () =>
     apiClient.post<{ markedRead: number; unread: number }>('/notifications/read-all').then((r) => r.data),
+
+  /** Removes one notification. The audit log is where lasting history lives. */
+  clear: (id: string) =>
+    apiClient.delete<{ cleared: boolean; unread: number }>(`/notifications/${id}`).then((r) => r.data),
+
+  /** Clears everything already read, leaving anything unseen alone. */
+  clearRead: () =>
+    apiClient.delete<{ cleared: number; unread: number }>('/notifications').then((r) => r.data),
 
   preferences: () =>
     apiClient

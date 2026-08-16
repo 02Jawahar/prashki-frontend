@@ -4,15 +4,36 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Heart, X } from 'lucide-react'
-import { wishlistService, type WishlistItem } from '@/services/storefront.service'
+import { trackEvent, wishlistService, type WishlistItem } from '@/services/storefront.service'
+import { useCart } from '@/hooks/use-cart'
 import { formatPrice } from '@/lib/money'
-import { Alert, EmptyState, SkeletonCards } from '@/components/ui'
+import { Alert, Button, EmptyState, SkeletonCards } from '@/components/ui'
 
 export default function WishlistPage() {
   const [items, setItems] = useState<WishlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
+  const [adding, setAdding] = useState<string | null>(null)
+  const { addItem } = useCart()
+
+  async function moveToCart(item: WishlistItem) {
+    if (!item.addableVariantId) return
+
+    setAdding(item.id)
+    setError(null)
+    try {
+      await addItem(item.addableVariantId, 1)
+      trackEvent('cart.add', { entityType: 'Product', entityId: item.product.id })
+      // Saved and bought are different lists; moving means leaving this one.
+      await wishlistService.remove(item.id)
+      setItems((current) => current.filter((row) => row.id !== item.id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add that to your bag')
+    } finally {
+      setAdding(null)
+    }
+  }
 
   useEffect(() => {
     void wishlistService
@@ -100,6 +121,37 @@ export default function WishlistPage() {
                   )}
                 </p>
               </Link>
+
+              {/*
+                Move to cart (FR-18.5). Only offered when the server has said
+                there is a single purchasable variant — otherwise the customer
+                goes and picks a size, because guessing one for them is how
+                the wrong thing gets bought.
+              */}
+              {item.available && item.inStock ? (
+                item.addableVariantId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 w-full"
+                    loading={adding === item.id}
+                    onClick={() => void moveToCart(item)}
+                  >
+                    Add to bag
+                  </Button>
+                ) : (
+                  <Link
+                    href={`/products/${item.product.slug}`}
+                    className="btn btn-outline btn-sm mt-3 w-full"
+                  >
+                    Choose a size
+                  </Link>
+                )
+              ) : (
+                <p className="mt-3 text-center text-xs text-ink-soft">
+                  {item.available ? 'Out of stock' : 'No longer available'}
+                </p>
+              )}
             </li>
           ))}
         </ul>

@@ -42,6 +42,12 @@ export interface CreateProductInput {
   status?: ProductStatus
   featured?: boolean
   categoryId?: string | null
+  material?: string | null
+  careInstructions?: string | null
+  seoTitle?: string | null
+  seoDescription?: string | null
+  seoNoindex?: boolean
+  scheduledFor?: string | null
   variants?: Array<{ name: string; sku: string; price?: number | null; stock: number }>
 }
 
@@ -165,7 +171,18 @@ export const adminService = {
     apiClient.delete<{ deleted: boolean }>(`/admin/categories/${id}`).then((r) => r.data),
 
   // --------------------------------------------------------------- orders
-  orders: (query: { q?: string; status?: string; page?: number; perPage?: number } = {}) =>
+  orders: (
+    query: {
+      q?: string
+      status?: string
+      from?: string
+      to?: string
+      minTotal?: number
+      maxTotal?: number
+      page?: number
+      perPage?: number
+    } = {},
+  ) =>
     apiClient
       .get<{
         orders: Array<{

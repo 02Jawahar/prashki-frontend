@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/money'
+import { WishlistButton } from './wishlist-button'
 import type { ProductListItem } from '@/types/api'
 
 /**
@@ -56,6 +57,18 @@ export function ProductCard({
             Sold out
           </span>
         )}
+
+        {/*
+          Save from the listing (FR-18.1). Always rendered rather than shown on
+          hover alone, because hover does not exist on a phone — it fades in on
+          pointer devices and stays put on touch.
+        */}
+        <WishlistButton
+          productId={product.id}
+          productName={product.name}
+          variant="icon"
+          className="absolute right-2 top-2 opacity-100 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+        />
       </div>
 
       <div className="pt-4 text-center">

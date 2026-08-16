@@ -109,6 +109,8 @@ export interface ProductDetail {
   createdAt: string
   updatedAt: string
   publishedAt: string | null
+  /** Set with status SCHEDULED; a job flips it to ACTIVE when this passes. */
+  scheduledFor: string | null
 }
 
 export interface Category {

@@ -34,6 +34,17 @@ export function ProductForm({ product, onSaved }: Props) {
   const [featured, setFeatured] = useState(product?.featured ?? false)
   const [categoryId, setCategoryId] = useState(product?.category?.id ?? '')
 
+  // Fabric and care copy the product page renders (FR-03.1), and the per-page
+  // SEO overrides (FR-11.1). Both were storable long before they were editable.
+  const [material, setMaterial] = useState(product?.material ?? '')
+  const [careInstructions, setCareInstructions] = useState(product?.careInstructions ?? '')
+  const [seoTitle, setSeoTitle] = useState(product?.seo?.title ?? '')
+  const [seoDescription, setSeoDescription] = useState(product?.seo?.description ?? '')
+  const [seoNoindex, setSeoNoindex] = useState(product?.seo?.noindex ?? false)
+  const [scheduledFor, setScheduledFor] = useState(
+    product?.scheduledFor ? product.scheduledFor.slice(0, 16) : '',
+  )
+
   // Variants are only editable at creation here; afterwards they get their own
   // panel so stock changes go through the inventory ledger.
   const [variants, setVariants] = useState<VariantDraft[]>([
@@ -76,6 +87,14 @@ export function ProductForm({ product, onSaved }: Props) {
       name: name.trim(),
       description: description.trim(),
       shortDescription: shortDescription.trim() || undefined,
+      material: material.trim() || null,
+      careInstructions: careInstructions.trim() || null,
+      // Empty means "fall back to the product's own name and summary", which
+      // is what the API does with null.
+      seoTitle: seoTitle.trim() || null,
+      seoDescription: seoDescription.trim() || null,
+      seoNoindex,
+      scheduledFor: status === 'SCHEDULED' && scheduledFor ? new Date(scheduledFor).toISOString() : null,
       sku: sku.trim(),
       price: priceInPaise,
       compareAtPrice: rupeeInputToPaise(compareAtPrice),
@@ -244,6 +263,84 @@ export function ProductForm({ product, onSaved }: Props) {
         </div>
       </section>
 
+      <section className="border border-rule bg-white p-6">
+        <h2 className="label-caps mb-1">Fabric and care</h2>
+        <p className="mb-5 text-xs text-ink-soft">
+          Shown on the product page under the description.
+        </p>
+
+        <div className="space-y-4">
+          <Field label="Material" htmlFor="material" hint="e.g. Handwoven chanderi silk, cotton lining.">
+            <Input id="material" value={material} onChange={(e) => setMaterial(e.target.value)} />
+          </Field>
+
+          <Field label="Care" htmlFor="care" hint="One instruction per line.">
+            <Textarea
+              id="care"
+              rows={3}
+              value={careInstructions}
+              onChange={(e) => setCareInstructions(e.target.value)}
+            />
+          </Field>
+        </div>
+      </section>
+
+      <section className="border border-rule bg-white p-6">
+        <h2 className="label-caps mb-1">Search engines</h2>
+        <p className="mb-5 text-xs text-ink-soft">
+          Leave these empty and the product&rsquo;s own name and summary are used.
+        </p>
+
+        <div className="space-y-4">
+          <Field label="Title override" htmlFor="seoTitle">
+            <Input
+              id="seoTitle"
+              maxLength={200}
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+              placeholder={name || 'Product name'}
+            />
+          </Field>
+
+          <Field label="Meta description" htmlFor="seoDescription" hint="Shown in search results.">
+            <Textarea
+              id="seoDescription"
+              rows={2}
+              maxLength={400}
+              value={seoDescription}
+              onChange={(e) => setSeoDescription(e.target.value)}
+              placeholder={shortDescription || 'A short summary'}
+            />
+          </Field>
+
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-[#5b6241]"
+              checked={seoNoindex}
+              onChange={(e) => setSeoNoindex(e.target.checked)}
+            />
+            Keep this product out of search results and the sitemap
+          </label>
+
+          {status === 'SCHEDULED' && (
+            <Field
+              label="Publish at"
+              htmlFor="scheduledFor"
+              required
+              hint="It goes live automatically within a minute of this time."
+            >
+              <Input
+                id="scheduledFor"
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(e) => setScheduledFor(e.target.value)}
+              />
+            </Field>
+          )}
+        </div>
+      </section>
+
       {!isEdit && (
         <section className="border border-rule bg-white p-6">
           <h2 className="label-caps mb-1">Variants</h2>
@@ -316,8 +413,10 @@ export function ProductForm({ product, onSaved }: Props) {
               value={status}
               onChange={(e) => setStatus(e.target.value as ProductDetail['status'])}
             >
-              <option value="DRAFT">Draft</option>
+              <option value="DRAFT">Draft — not visible</option>
+              <option value="SCHEDULED">Scheduled — goes live at a set time</option>
               <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive — hidden, not archived</option>
               <option value="ARCHIVED">Archived</option>
             </Select>
           </Field>

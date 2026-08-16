@@ -19,7 +19,14 @@ interface AuthContextValue {
   isAdmin: boolean
   can: (permission: string) => boolean
   login: (email: string, password: string) => Promise<AuthUser>
-  register: (input: { name: string; email: string; password: string; phone?: string }) => Promise<AuthUser>
+  register: (input: {
+    name: string
+    email: string
+    password: string
+    phone?: string
+    acceptedTerms: boolean
+    marketingOptIn?: boolean
+  }) => Promise<AuthUser>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }

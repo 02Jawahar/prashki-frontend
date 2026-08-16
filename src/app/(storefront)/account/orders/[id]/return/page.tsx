@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, X } from 'lucide-react'
 import {
   RETURN_REASONS,
   returnService,
@@ -36,6 +36,24 @@ export default function StartReturnPage() {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [reason, setReason] = useState<string>(RETURN_REASONS[0].value)
   const [comment, setComment] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+
+  async function uploadEvidence(files: FileList | null) {
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    setError(null)
+    try {
+      const uploaded = await returnService.uploadEvidence([...files])
+      // Capped server-side too; this keeps the UI honest about the limit.
+      setImages((current) => [...current, ...uploaded.map((i) => i.url)].slice(0, 4))
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Those photos could not be uploaded')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -76,6 +94,7 @@ export default function StartReturnPage() {
         orderId,
         reason,
         comment: comment || undefined,
+        images,
         items: chosen.map(([orderItemId, quantity]) => ({ orderItemId, quantity })),
       })
       router.push(`/account/returns/${request.id}`)
@@ -200,6 +219,51 @@ export default function StartReturnPage() {
                 onChange={(event) => setComment(event.target.value)}
               />
             </Field>
+
+            {/*
+              Evidence (FR-22.2). Optional in general, but a damage or defect
+              claim is settled far faster with a photo, so the hint says so.
+            */}
+            <Field
+              label="Photos"
+              htmlFor="evidence"
+              hint="Up to four, 5 MB each. Especially helpful for damage or a fault."
+            >
+              <input
+                id="evidence"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                multiple
+                disabled={uploading || images.length >= 4}
+                onChange={(event) => {
+                  void uploadEvidence(event.target.files)
+                  event.target.value = ''
+                }}
+                className="field cursor-pointer file:mr-3 file:border-0 file:bg-transparent file:text-sm"
+              />
+            </Field>
+
+            {uploading && <p className="text-xs text-ink-soft">Uploading&hellip;</p>}
+
+            {images.length > 0 && (
+              <ul className="flex flex-wrap gap-3">
+                {images.map((url) => (
+                  <li key={url} className="relative">
+                    <div className="relative size-20 overflow-hidden border border-rule bg-sage-50">
+                      <Image src={url} alt="" fill sizes="80px" className="object-cover" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setImages((current) => current.filter((u) => u !== url))}
+                      aria-label="Remove this photo"
+                      className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full border border-rule bg-paper text-ink-soft hover:text-danger"
+                    >
+                      <X className="size-3" strokeWidth={2} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <div className="border border-rule p-5">

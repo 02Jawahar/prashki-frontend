@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Download, Search } from 'lucide-react'
 import { adminService } from '@/services/admin.service'
 import { formatPrice } from '@/lib/money'
 import { formatDate } from '@/lib/utils'
@@ -28,14 +28,32 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [minTotal, setMinTotal] = useState('')
+  const [maxTotal, setMaxTotal] = useState('')
   const [page, setPage] = useState(1)
+
+  /** Every filter on screen, in the shape both the list and export accept. */
+  const filters = useCallback(
+    () => ({
+      q: q || undefined,
+      status: status || undefined,
+      from: from || undefined,
+      // Through the end of that day, not its first instant — otherwise "to
+      // today" silently excludes everything ordered today.
+      to: to ? `${to}T23:59:59.999Z` : undefined,
+      minTotal: minTotal ? Math.round(Number(minTotal) * 100) : undefined,
+      maxTotal: maxTotal ? Math.round(Number(maxTotal) * 100) : undefined,
+    }),
+    [q, status, from, to, minTotal, maxTotal],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const res = await adminService.orders({
-        q: q || undefined,
-        status: status || undefined,
+        ...filters(),
         page,
         perPage: 25,
       })
@@ -47,12 +65,21 @@ export default function AdminOrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [q, status, page])
+  }, [filters, page])
 
   useEffect(() => {
     const id = setTimeout(() => void load(), q ? 300 : 0)
     return () => clearTimeout(id)
   }, [load, q])
+
+  const exportQuery = (() => {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(filters())) {
+      if (value !== undefined) params.set(key, String(value))
+    }
+    const query = params.toString()
+    return query ? `?${query}` : ''
+  })()
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -94,6 +121,64 @@ export default function AdminOrdersPage() {
             </option>
           ))}
         </Select>
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-end gap-3">
+        {(
+          [
+            ['from', 'From', from, setFrom, 'date'],
+            ['to', 'To', to, setTo, 'date'],
+            ['minTotal', 'Min total (₹)', minTotal, setMinTotal, 'number'],
+            ['maxTotal', 'Max total (₹)', maxTotal, setMaxTotal, 'number'],
+          ] as const
+        ).map(([id, label, value, set, type]) => (
+          <label key={id} className="flex flex-col gap-1">
+            <span className="label-caps text-ink-soft">{label}</span>
+            <Input
+              id={id}
+              type={type}
+              min={type === 'number' ? 0 : undefined}
+              value={value}
+              onChange={(e) => {
+                set(e.target.value)
+                setPage(1)
+              }}
+              className="w-40"
+            />
+          </label>
+        ))}
+
+        {/*
+          The export uses the same filters as the list, so what downloads is
+          what is on screen. A plain link rather than fetch: the browser
+          handles the download, and the session cookie goes with it.
+        */}
+        <a
+          href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/admin/orders/export${exportQuery}`}
+          className="btn btn-outline btn-sm"
+          download
+        >
+          <Download className="size-3.5" strokeWidth={1.8} />
+          Export CSV
+        </a>
+
+        {(from || to || minTotal || maxTotal || status || q) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setQ('')
+              setStatus('')
+              setFrom('')
+              setTo('')
+              setMinTotal('')
+              setMaxTotal('')
+              setPage(1)
+            }}
+          >
+            Clear filters
+          </Button>
+        )}
       </div>
 
       {error && <Alert>{error}</Alert>}
