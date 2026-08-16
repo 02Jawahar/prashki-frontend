@@ -668,6 +668,111 @@ export const reportService = {
       .then((r) => r.data.searches),
 }
 
+// ------------------------------------------------------- roles and staff
+
+export interface PermissionRow {
+  id: string
+  key: string
+  group: string
+  label: string
+}
+
+export interface Role {
+  id: string
+  key: string
+  name: string
+  description: string | null
+  isSystem: boolean
+  /** Super Admin — always holds everything, grants not editable. */
+  isLocked: boolean
+  userCount: number
+  permissions: string[]
+}
+
+export interface StaffMember {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  status: string
+  emailVerified: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  roles: Array<{ id: string; key: string; name: string }>
+  /** True until they first sign in — the invitation is outstanding. */
+  pendingInvite: boolean
+}
+
+export const rbacService = {
+  permissions: () =>
+    apiClient
+      .get<{
+        permissions: PermissionRow[]
+        groups: Array<{ group: string; permissions: PermissionRow[] }>
+      }>('/admin/permissions')
+      .then((r) => r.data),
+
+  roles: () => apiClient.get<{ roles: Role[] }>('/admin/roles').then((r) => r.data.roles),
+
+  createRole: (input: { name: string; description?: string | null; permissions: string[] }) =>
+    apiClient.post<{ role: Role }>('/admin/roles', input).then((r) => r.data.role),
+
+  updateRole: (
+    id: string,
+    input: { name: string; description?: string | null; permissions: string[] },
+  ) => apiClient.patch<{ role: Role }>(`/admin/roles/${id}`, input).then((r) => r.data.role),
+
+  deleteRole: (id: string) =>
+    apiClient.delete<{ deleted: boolean }>(`/admin/roles/${id}`).then((r) => r.data),
+
+  staff: (query: { q?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ staff: StaffMember[] }>(`/admin/staff${qs(query)}`)
+      .then((r) => ({ staff: r.data.staff, pagination: r.pagination as Pagination })),
+
+  invite: (input: { name: string; email: string; roleIds: string[] }) =>
+    apiClient
+      .post<{ staff: StaffMember; message: string }>('/admin/staff', input)
+      .then((r) => r.data),
+
+  updateStaff: (id: string, input: { roleIds?: string[]; status?: 'ACTIVE' | 'SUSPENDED' }) =>
+    apiClient.patch<{ staff: StaffMember }>(`/admin/staff/${id}`, input).then((r) => r.data.staff),
+
+  resendInvite: (id: string) =>
+    apiClient
+      .post<{ sent: boolean; message: string }>(`/admin/staff/${id}/invite`)
+      .then((r) => r.data),
+}
+
+// ------------------------------------------------------------- audit log
+
+export interface AuditEntry {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  metadata: Record<string, unknown> | null
+  ip: string | null
+  userAgent: string | null
+  createdAt: string
+  actor: { id: string; name: string; email: string | null } | null
+}
+
+export const auditService = {
+  list: (
+    query: {
+      action?: string
+      entityType?: string
+      entityId?: string
+      userId?: string
+      page?: number
+    } = {},
+  ) =>
+    apiClient
+      .get<{ entries: AuditEntry[]; actions: string[] }>(`/admin/audit${qs(query)}`)
+      .then((r) => ({ ...r.data, pagination: r.pagination as Pagination })),
+}
+
 // --------------------------------------------------------- customer notes
 
 export interface CustomerNote {

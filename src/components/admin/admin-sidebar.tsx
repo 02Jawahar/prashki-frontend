@@ -24,6 +24,9 @@ import {
   BarChart3,
   SlidersHorizontal,
   Signpost,
+  UserCog,
+  ShieldCheck,
+  ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -88,6 +91,14 @@ const NAV: NavGroup[] = [
     entries: [
       { label: 'Shipping', href: '/admin/shipping', icon: Truck, permission: 'settings.read' },
       { label: 'Settings', href: '/admin/settings', icon: Settings, permission: 'settings.read' },
+    ],
+  },
+  {
+    label: 'Access',
+    entries: [
+      { label: 'Staff', href: '/admin/staff', icon: UserCog, permission: 'user.manage' },
+      { label: 'Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'role.manage' },
+      { label: 'Audit log', href: '/admin/audit', icon: ScrollText, permission: 'audit.read' },
     ],
   },
 ]
