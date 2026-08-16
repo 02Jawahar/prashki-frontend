@@ -74,11 +74,17 @@ export function Field({
   )
 }
 
+/**
+ * `ComponentPropsWithRef` rather than `InputHTMLAttributes`, so a caller can
+ * pass a `ref` — React 19 treats it as an ordinary prop on function
+ * components, but the narrower attribute type does not declare it and the call
+ * fails to compile. Same reason `Button` is typed this way.
+ */
 export function Input({
   error,
   className,
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
+}: ComponentPropsWithRef<'input'> & { error?: boolean }) {
   return <input className={cn('field', error && 'field-error', className)} {...props} />
 }
 
@@ -86,7 +92,7 @@ export function Textarea({
   error,
   className,
   ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: boolean }) {
+}: ComponentPropsWithRef<'textarea'> & { error?: boolean }) {
   return <textarea className={cn('field resize-y', error && 'field-error', className)} {...props} />
 }
 
@@ -95,7 +101,7 @@ export function Select({
   className,
   children,
   ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: boolean }) {
+}: ComponentPropsWithRef<'select'> & { error?: boolean }) {
   return (
     <select className={cn('field cursor-pointer', error && 'field-error', className)} {...props}>
       {children}

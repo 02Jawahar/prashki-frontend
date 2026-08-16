@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   messagingService,
   type MessageLog,
@@ -69,6 +69,39 @@ function Templates() {
   const [draft, setDraft] = useState({ subject: '', body: '', isActive: true })
   const [saving, setSaving] = useState(false)
 
+  const [preview, setPreview] = useState<{ subject: string | null; body: string; undeclared: string[] } | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+  const [testing, setTesting] = useState(false)
+
+  /**
+   * The editor opens above the table, and the table is long enough that a row
+   * near the bottom puts the form well off the top of the screen — pressing
+   * Edit there looked like it did nothing at all. Scrolling to the panel and
+   * moving focus into it is what makes the button appear to work.
+   */
+  const editorRef = useRef<HTMLDivElement>(null)
+  const firstFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+
+  function startEditing(template: MessageTemplate) {
+    setEditing(template)
+    setDraft({
+      subject: template.subject ?? '',
+      body: template.body,
+      isActive: template.isActive,
+    })
+    setPreview(null)
+    setNotice(null)
+    setError(null)
+  }
+
+  useEffect(() => {
+    if (!editing) return
+    editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // After the scroll starts, so the browser does not fight it.
+    const timer = setTimeout(() => firstFieldRef.current?.focus(), 250)
+    return () => clearTimeout(timer)
+  }, [editing])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -104,11 +137,60 @@ function Templates() {
       })
       setNotice('Template saved.')
       setEditing(null)
+      setPreview(null)
       await load()
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : 'Could not save that template')
     } finally {
       setSaving(false)
+    }
+  }
+
+  /** Renders what is on screen, not what is stored — the point is to check an edit. */
+  async function showPreview() {
+    if (!editing) return
+
+    setPreviewing(true)
+    setError(null)
+    try {
+      setPreview(
+        await messagingService.preview({
+          key: editing.key,
+          channel: editing.channel,
+          subject: draft.subject || null,
+          body: draft.body,
+        }),
+      )
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not render that template')
+    } finally {
+      setPreviewing(false)
+    }
+  }
+
+  async function testSend() {
+    if (!editing) return
+
+    setTesting(true)
+    setError(null)
+    try {
+      const result = await messagingService.testSend({ key: editing.key, channel: editing.channel })
+
+      if (!result.sent) {
+        setError(`Not sent — ${result.reason ?? 'the provider refused it'}.`)
+      } else if (result.provider === 'console' || result.provider === 'noop') {
+        // "Sent" against a stub means the pipeline worked and nothing left the
+        // building. Saying so here saves an hour of checking an empty inbox.
+        setNotice(
+          `Sent to ${result.recipient} through the "${result.provider}" provider — it was written to the server log and the message log, not delivered. Configure a real provider to send for real.`,
+        )
+      } else {
+        setNotice(`Sent to ${result.recipient} via ${result.provider}.`)
+      }
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not send the test')
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -120,7 +202,7 @@ function Templates() {
       {notice && <Alert tone="success">{notice}</Alert>}
 
       {editing && (
-        <div className="mb-5 border border-rule bg-white p-5">
+        <div ref={editorRef} className="mb-5 scroll-mt-6 border border-rule bg-white p-5">
           <h2 className="display mb-1 text-lg">{editing.name}</h2>
           <p className="mb-4 text-xs text-ink-soft">
             {editing.key} · {editing.channel.toLowerCase()}
@@ -141,6 +223,7 @@ function Templates() {
             <Field label="Subject" htmlFor="subject" required>
               <Input
                 id="subject"
+                ref={firstFieldRef as React.RefObject<HTMLInputElement>}
                 value={draft.subject}
                 onChange={(event) => setDraft((d) => ({ ...d, subject: event.target.value }))}
               />
@@ -151,12 +234,48 @@ function Templates() {
             <Field label="Message" htmlFor="body" required>
               <Textarea
                 id="body"
+                // On a channel with no subject line, this is the first field.
+                ref={
+                  editing.channel === 'EMAIL'
+                    ? undefined
+                    : (firstFieldRef as React.RefObject<HTMLTextAreaElement>)
+                }
                 rows={10}
                 value={draft.body}
-                onChange={(event) => setDraft((d) => ({ ...d, body: event.target.value }))}
+                onChange={(event) => {
+                  setDraft((d) => ({ ...d, body: event.target.value }))
+                  // The preview is of the previous text the moment you type.
+                  setPreview(null)
+                }}
               />
             </Field>
           </div>
+
+          {preview && (
+            <div className="mt-4 border border-rule bg-shell p-4">
+              <p className="label-caps mb-2 text-xs">Preview — with sample values</p>
+
+              {preview.undeclared.length > 0 && (
+                <p className="mb-3 text-xs text-amber-800">
+                  {preview.undeclared.map((v) => `{{${v}}}`).join(', ')}{' '}
+                  {preview.undeclared.length === 1 ? 'is' : 'are'} not in this template&rsquo;s
+                  placeholder list, so {preview.undeclared.length === 1 ? 'it' : 'they'} will render
+                  blank in a real message.
+                </p>
+              )}
+
+              {preview.subject && (
+                <p className="mb-2 text-sm">
+                  <span className="text-ink-soft">Subject: </span>
+                  {preview.subject}
+                </p>
+              )}
+
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                {preview.body}
+              </pre>
+            </div>
+          )}
 
           <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-sm">
             <input
@@ -168,14 +287,25 @@ function Templates() {
             Active — turning this off stops the message being sent at all
           </label>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <Button size="sm" loading={saving} onClick={() => void save()}>
               Save template
+            </Button>
+            <Button size="sm" variant="ghost" loading={previewing} onClick={() => void showPreview()}>
+              Preview
+            </Button>
+            <Button size="sm" variant="ghost" loading={testing} onClick={() => void testSend()}>
+              Send me a test
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
               Cancel
             </Button>
           </div>
+
+          <p className="mt-3 text-xs text-ink-soft">
+            A test sends the <em>saved</em> template to your own address — save first if you want to
+            test an edit.
+          </p>
         </div>
       )}
 
@@ -210,14 +340,7 @@ function Templates() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => {
-                      setEditing(template)
-                      setDraft({
-                        subject: template.subject ?? '',
-                        body: template.body,
-                        isActive: template.isActive,
-                      })
-                    }}
+                    onClick={() => startEditing(template)}
                   >
                     Edit
                   </Button>

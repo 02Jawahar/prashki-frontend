@@ -608,6 +608,31 @@ export const messagingService = {
       .put<{ template: MessageTemplate }>('/admin/messaging/templates', input)
       .then((r) => r.data.template),
 
+  /** Renders a template with sample values, including unsaved edits. */
+  preview: (input: {
+    key: string
+    channel: string
+    subject?: string | null
+    body?: string
+  }) =>
+    apiClient
+      .post<{
+        subject: string | null
+        body: string
+        usedVariables: Record<string, string>
+        undeclared: string[]
+      }>('/admin/messaging/templates/preview', input)
+      .then((r) => r.data),
+
+  /** Sends the real thing, to the signed-in admin. The API ignores any address. */
+  testSend: (input: { key: string; channel: string }) =>
+    apiClient
+      .post<{ sent: boolean; reason: string | null; recipient: string; provider: string }>(
+        '/admin/messaging/templates/test-send',
+        input,
+      )
+      .then((r) => r.data),
+
   logs: (query: { channel?: string; status?: string; page?: number } = {}) =>
     apiClient
       .get<{ logs: MessageLog[] }>(`/admin/messaging/logs${qs(query)}`)
