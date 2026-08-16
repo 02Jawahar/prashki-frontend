@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { adminService } from '@/services/admin.service'
 import { customerNoteService, type CustomerNote } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
+import { ErasurePanel } from '@/components/admin/erasure-panel'
 import { formatPrice } from '@/lib/money'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import {
@@ -298,6 +299,15 @@ export default function AdminCustomerDetailPage() {
               </ul>
             )}
           </section>
+
+          {can('customer.update') && (
+            <ErasurePanel
+              customerId={id}
+              customerEmail={customer.email}
+              customerStatus={customer.status}
+              onErased={() => void load()}
+            />
+          )}
         </aside>
       </div>
 

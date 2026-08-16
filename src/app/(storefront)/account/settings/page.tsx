@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { authService } from '@/services/auth.service'
 import { notificationService } from '@/services/storefront.service'
 import { ApiRequestError } from '@/services/api-client'
+import { DataRights } from '@/components/storefront/data-rights'
 import { Alert, Button, Field, Input, SkeletonRows } from '@/components/ui'
 
 /**
@@ -263,6 +264,8 @@ export default function AccountSettingsPage() {
           </div>
         )}
       </section>
+
+      <DataRights />
     </div>
   )
 }

@@ -773,6 +773,59 @@ export const auditService = {
       .then((r) => ({ ...r.data, pagination: r.pagination as Pagination })),
 }
 
+// ------------------------------------------------- webhook failure queue
+
+export interface WebhookEventRecord {
+  id: string
+  provider: string
+  eventId: string
+  eventType: string
+  status: 'RECEIVED' | 'PROCESSED' | 'FAILED' | 'SKIPPED'
+  error: string | null
+  payload: unknown
+  receivedAt: string
+  processedAt: string | null
+}
+
+export interface RetryOutcome {
+  status: 'PROCESSED' | 'FAILED' | 'SKIPPED'
+  error?: string
+}
+
+export const webhookEventService = {
+  list: (query: { status?: string; provider?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ events: WebhookEventRecord[]; stuckCount: number }>(`/admin/webhook-events${qs(query)}`)
+      .then((r) => ({ ...r.data, pagination: r.pagination as Pagination })),
+
+  retry: (id: string) =>
+    apiClient.post<RetryOutcome>(`/admin/webhook-events/${id}/retry`, {}).then((r) => r.data),
+}
+
+// ------------------------------------------------------- account erasure
+
+export interface ErasureBlocker {
+  reason: string
+  count: number
+}
+
+export const erasureService = {
+  check: (customerId: string) =>
+    apiClient
+      .get<{ canErase: boolean; blockers: ErasureBlocker[] }>(
+        `/admin/customers/${customerId}/erasure`,
+      )
+      .then((r) => r.data),
+
+  erase: (customerId: string, reason: string) =>
+    apiClient
+      .post<{ anonymisedAt: string; ordersRedacted: number }>(
+        `/admin/customers/${customerId}/erasure`,
+        { reason },
+      )
+      .then((r) => r.data),
+}
+
 // --------------------------------------------------------- customer notes
 
 export interface CustomerNote {

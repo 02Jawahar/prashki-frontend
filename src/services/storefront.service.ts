@@ -371,6 +371,25 @@ export const notificationService = {
       .then((r) => r.data.preferences),
 }
 
+// ------------------------------------------------------------ data rights
+
+export interface ErasureEligibility {
+  canErase: boolean
+  blockers: Array<{ reason: string; count: number }>
+}
+
+export const privacyService = {
+  /** Everything the store holds about the signed-in customer. */
+  exportData: () => apiClient.get<Record<string, unknown>>('/privacy/export').then((r) => r.data),
+
+  eligibility: () => apiClient.get<ErasureEligibility>('/privacy/erasure').then((r) => r.data),
+
+  erase: (password: string, reason?: string) =>
+    apiClient
+      .post<{ anonymisedAt: string; message: string }>('/privacy/erasure', { password, reason })
+      .then((r) => r.data),
+}
+
 // -------------------------------------------------------------- analytics
 
 /**

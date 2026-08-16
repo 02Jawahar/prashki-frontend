@@ -23,6 +23,7 @@ import {
   MessageSquare,
   BarChart3,
   SlidersHorizontal,
+  Webhook,
   Signpost,
   UserCog,
   ShieldCheck,
@@ -91,6 +92,12 @@ const NAV: NavGroup[] = [
     entries: [
       { label: 'Shipping', href: '/admin/shipping', icon: Truck, permission: 'settings.read' },
       { label: 'Settings', href: '/admin/settings', icon: Settings, permission: 'settings.read' },
+      {
+        label: 'Callbacks',
+        href: '/admin/webhook-events',
+        icon: Webhook,
+        permission: 'settings.read',
+      },
     ],
   },
   {
