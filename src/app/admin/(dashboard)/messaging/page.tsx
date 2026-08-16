@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   messagingService,
+  type MessageEvent,
   type MessageLog,
   type MessageTemplate,
 } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
+import { Check, Plus } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import {
   Alert,
@@ -62,6 +64,9 @@ export default function AdminMessagingPage() {
 
 function Templates() {
   const [templates, setTemplates] = useState<MessageTemplate[]>([])
+  const [events, setEvents] = useState<MessageEvent[]>([])
+  const [orphans, setOrphans] = useState<Array<{ id: string; key: string; channel: string }>>([])
+  const [toggling, setToggling] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -105,7 +110,15 @@ function Templates() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setTemplates(await messagingService.templates())
+      // Both, because the event list drives the channel switches and the
+      // templates carry the copy the editor needs.
+      const [rows, catalogue] = await Promise.all([
+        messagingService.templates(),
+        messagingService.events(),
+      ])
+      setTemplates(rows)
+      setEvents(catalogue.events)
+      setOrphans(catalogue.orphans)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load templates')
@@ -113,6 +126,32 @@ function Templates() {
       setLoading(false)
     }
   }, [])
+
+  /**
+   * Turning a channel on creates its template if there is not one yet, seeded
+   * from the email copy — a new WhatsApp message starts as the email rather
+   * than as an empty box, which is a far better starting point than blank.
+   */
+  async function setChannel(key: string, channel: string, enabled: boolean) {
+    setToggling(`${key}:${channel}`)
+    setError(null)
+    setNotice(null)
+
+    try {
+      const result = await messagingService.setChannel({ key, channel, enabled })
+      await load()
+
+      if (result.created) {
+        setNotice(
+          `${channel === 'WHATSAPP' ? 'WhatsApp' : channel.toLowerCase()} is on, with a copy of the email wording to edit.`,
+        )
+      }
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not change that channel')
+    } finally {
+      setToggling(null)
+    }
+  }
 
   useEffect(() => {
     void load()
@@ -309,47 +348,94 @@ function Templates() {
         </div>
       )}
 
-      <div className="border border-rule bg-white">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-rule text-left text-xs text-ink-soft">
-              <th className="p-3 font-normal">Template</th>
-              <th className="p-3 font-normal">Channel</th>
-              <th className="p-3 font-normal">Subject</th>
-              <th className="p-3 font-normal">Active</th>
-              <th className="p-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((template) => (
-              <tr key={template.id} className="border-b border-hairline last:border-0">
-                <td className="p-3">
-                  <p>{template.name}</p>
-                  <p className="text-xs text-ink-soft">{template.key}</p>
-                </td>
-                <td className="p-3 capitalize text-ink-soft">{template.channel.toLowerCase()}</td>
-                <td className="p-3 text-ink-soft">{template.subject ?? '—'}</td>
-                <td className="p-3">
-                  {template.isActive ? (
-                    <span className="badge badge-success">On</span>
-                  ) : (
-                    <span className="badge badge-neutral">Off</span>
-                  )}
-                </td>
-                <td className="p-3 text-right">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => startEditing(template)}
-                  >
-                    Edit
-                  </Button>
-                </td>
-              </tr>
+      <ul className="space-y-3">
+        {events.map((event) => (
+          <li key={event.key} className="border border-rule bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{event.label}</p>
+                <p className="mt-0.5 text-xs text-ink-soft">{event.description}</p>
+              </div>
+              {event.transactional && (
+                <span
+                  className="badge badge-neutral shrink-0 text-[0.65rem]"
+                  title="Sent regardless of marketing preferences — it is part of the purchase."
+                >
+                  Transactional
+                </span>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {event.channels.map((channel) => {
+                const template = templates.find((t) => t.id === channel.templateId)
+                const busy = toggling === `${event.key}:${channel.channel}`
+
+                return (
+                  <span key={channel.channel} className="inline-flex items-center">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void setChannel(event.key, channel.channel, !channel.enabled)}
+                      aria-pressed={channel.enabled}
+                      className={`border px-3 py-1.5 text-xs capitalize transition-colors disabled:opacity-50 ${
+                        channel.enabled
+                          ? 'border-sage-700 bg-sage-50 text-sage-700'
+                          : 'border-rule text-ink-soft hover:bg-shell'
+                      }`}
+                    >
+                      {channel.enabled ? (
+                        <Check className="mr-1 inline size-3" strokeWidth={2.5} />
+                      ) : (
+                        <Plus className="mr-1 inline size-3" strokeWidth={2} />
+                      )}
+                      {channel.channel === 'WHATSAPP' ? 'WhatsApp' : channel.channel.toLowerCase()}
+                    </button>
+
+                    {template && (
+                      <button
+                        type="button"
+                        onClick={() => startEditing(template)}
+                        className="ml-1.5 mr-2 text-xs text-sage-700 underline"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </span>
+                )
+              })}
+            </div>
+
+            {/*
+              A channel that needs a phone number is only as good as the data.
+              Saying so here stops "WhatsApp is on but nothing arrives" becoming
+              a bug report.
+            */}
+            {event.channels.some((c) => c.enabled && c.channel !== 'EMAIL') && (
+              <p className="mt-3 text-xs text-ink-soft">
+                WhatsApp and SMS only reach customers who have saved a phone number.
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {orphans.length > 0 && (
+        <div className="mt-6 border border-amber-300 bg-amber-50 p-4 text-sm">
+          <p className="font-medium text-amber-900">Templates with no matching event</p>
+          <p className="mt-1 text-xs text-amber-800">
+            These will never be sent — the event they were written for is not one the store emits.
+            Usually a leftover from a renamed event.
+          </p>
+          <ul className="mt-2 text-xs text-amber-800">
+            {orphans.map((orphan) => (
+              <li key={orphan.id}>
+                {orphan.key} · {orphan.channel.toLowerCase()}
+              </li>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

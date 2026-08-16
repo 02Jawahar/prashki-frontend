@@ -597,6 +597,23 @@ export interface MessageLog {
   template: { key: string; name: string } | null
 }
 
+export interface MessageEventChannel {
+  channel: 'EMAIL' | 'WHATSAPP' | 'SMS'
+  templateId: string | null
+  /** A template exists, whether or not it is switched on. */
+  configured: boolean
+  /** The channel will actually send. */
+  enabled: boolean
+}
+
+export interface MessageEvent {
+  key: string
+  label: string
+  description: string
+  channels: MessageEventChannel[]
+  transactional: boolean
+}
+
 export const messagingService = {
   templates: () =>
     apiClient
@@ -607,6 +624,23 @@ export const messagingService = {
     apiClient
       .put<{ template: MessageTemplate }>('/admin/messaging/templates', input)
       .then((r) => r.data.template),
+
+  /** Events the store can message about, with the state of each channel. */
+  events: () =>
+    apiClient
+      .get<{ events: MessageEvent[]; orphans: Array<{ id: string; key: string; channel: string }> }>(
+        '/admin/messaging/events',
+      )
+      .then((r) => r.data),
+
+  /** Turns a channel on or off, creating the template the first time. */
+  setChannel: (input: { key: string; channel: string; enabled: boolean }) =>
+    apiClient
+      .put<{ template: MessageTemplate | null; created: boolean }>(
+        '/admin/messaging/events/channels',
+        input,
+      )
+      .then((r) => r.data),
 
   /** Renders a template with sample values, including unsaved edits. */
   preview: (input: {
