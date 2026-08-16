@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { ExternalLink, Plus } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Plus } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { shipmentService, type AdminShipment } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
@@ -57,6 +57,7 @@ export function OrderShipments({
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [carrier, setCarrier] = useState('')
   const [trackingNumber, setTrackingNumber] = useState('')
+  const [dimensions, setDimensions] = useState({ length: '', width: '', height: '', weight: '' })
 
   const [statusChange, setStatusChange] = useState<{ id: string; status: string } | null>(null)
 
@@ -95,15 +96,26 @@ export function OrderShipments({
     setError(null)
 
     try {
-      await shipmentService.create(orderId, {
+      const result = await shipmentService.create(orderId, {
         items: chosen.map(([orderItemId, quantity]) => ({ orderItemId, quantity })),
         carrier: carrier || null,
         trackingNumber: trackingNumber || null,
+        // Left empty, the API weighs the parcel from the order's variants.
+        weightGrams: dimensions.weight ? Math.round(Number(dimensions.weight) * 1000) : undefined,
+        lengthMm: dimensions.length ? Math.round(Number(dimensions.length) * 10) : undefined,
+        widthMm: dimensions.width ? Math.round(Number(dimensions.width) * 10) : undefined,
+        heightMm: dimensions.height ? Math.round(Number(dimensions.height) * 10) : undefined,
       })
+
+      // Booking is best-effort; a carrier that cannot be reached leaves a
+      // parcel we can retry rather than losing the record.
+      if (result.bookingError) setError(result.bookingError)
+
       setCreating(false)
       setQuantities({})
       setCarrier('')
       setTrackingNumber('')
+      setDimensions({ length: '', width: '', height: '', weight: '' })
       await load()
       await onChanged?.()
     } catch (err) {
@@ -208,6 +220,37 @@ export function OrderShipments({
             </Field>
           </div>
 
+          <fieldset className="mt-4">
+            <legend className="field-label">Parcel</legend>
+            <p className="mb-2 text-xs text-ink-soft">
+              Leave the weight empty and it is calculated from the items. Dimensions are for the
+              carrier manifest.
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(
+                [
+                  ['weight', 'Weight (kg)'],
+                  ['length', 'Length (cm)'],
+                  ['width', 'Width (cm)'],
+                  ['height', 'Height (cm)'],
+                ] as const
+              ).map(([key, label]) => (
+                <Input
+                  key={key}
+                  type="number"
+                  min={0}
+                  step="0.1"
+                  aria-label={label}
+                  placeholder={label}
+                  value={dimensions[key]}
+                  onChange={(event) =>
+                    setDimensions((current) => ({ ...current, [key]: event.target.value }))
+                  }
+                />
+              ))}
+            </div>
+          </fieldset>
+
           <div className="mt-4 flex gap-3">
             <Button
               size="sm"
@@ -241,6 +284,16 @@ export function OrderShipments({
                       </span>
                     )}
                   </p>
+
+                  {(shipment.weightGrams || shipment.providerShipmentId) && (
+                    <p className="mt-0.5 text-xs text-ink-soft">
+                      {shipment.weightGrams ? `${(shipment.weightGrams / 1000).toFixed(2)} kg` : ''}
+                      {shipment.weightGrams && shipment.lengthMm
+                        ? ` · ${shipment.lengthMm / 10}×${(shipment.widthMm ?? 0) / 10}×${(shipment.heightMm ?? 0) / 10} cm`
+                        : ''}
+                      {shipment.providerShipmentId ? ` · ${shipment.providerShipmentId}` : ''}
+                    </p>
+                  )}
                   <ul className="mt-1 text-xs text-ink-soft">
                     {shipment.items.map((item) => (
                       <li key={item.id}>
@@ -251,6 +304,17 @@ export function OrderShipments({
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {shipment.labelUrl && (
+                    <a
+                      href={shipment.labelUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="label-caps link-underline inline-flex items-center gap-1 text-sage-700"
+                    >
+                      Label
+                      <ExternalLink className="size-3" strokeWidth={1.6} aria-hidden />
+                    </a>
+                  )}
                   {shipment.trackingUrl && (
                     <a
                       href={shipment.trackingUrl}
@@ -266,14 +330,62 @@ export function OrderShipments({
                 </div>
               </div>
 
+              {/*
+                A parcel raised for review is the one thing on this page that
+                needs acting on, so it gets a banner rather than a badge.
+              */}
+              {shipment.needsReview && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-warning/40 bg-[#fbf3e4] p-3 text-sm">
+                  <span className="flex items-start gap-2">
+                    <AlertTriangle
+                      className="mt-0.5 size-4 shrink-0 text-warning"
+                      strokeWidth={1.6}
+                      aria-hidden
+                    />
+                    <span>
+                      Needs a look
+                      {shipment.reviewReason && (
+                        <span className="mt-0.5 block text-xs text-ink-soft">
+                          {shipment.reviewReason}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  {editable && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      loading={busy}
+                      onClick={() =>
+                        void shipmentService
+                          .markReviewed(shipment.id)
+                          .then(load)
+                          .catch(() => setError('Could not clear that flag'))
+                      }
+                    >
+                      Mark reviewed
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {shipment.events.length > 0 && (
                 <ol className="mt-3 space-y-1.5 border-t border-hairline pt-3 text-xs text-ink-soft">
-                  {shipment.events.slice(0, 4).map((event) => (
-                    <li key={event.id}>
+                  {shipment.events.slice(0, 5).map((event) => (
+                    <li key={event.id} className={event.ignoredForStatus ? 'opacity-60' : undefined}>
                       <span className="capitalize">{event.status.replace(/_/g, ' ').toLowerCase()}</span>
                       {' · '}
                       {formatDateTime(event.occurredAt)}
+                      {event.location ? ` · ${event.location}` : ''}
                       {event.message ? ` · ${event.message}` : ''}
+                      {event.source === 'provider' && event.providerStatus && (
+                        <span className="ml-1 text-[0.65rem]">[{event.providerStatus}]</span>
+                      )}
+                      {/* An event we deliberately did not apply, so the trail
+                          does not appear to contradict the status above. */}
+                      {event.ignoredForStatus && (
+                        <span className="ml-1 text-[0.65rem] text-warning">not applied</span>
+                      )}
                     </li>
                   ))}
                 </ol>

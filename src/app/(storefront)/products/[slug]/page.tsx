@@ -7,6 +7,7 @@ import { AddToCart } from '@/components/storefront/add-to-cart'
 import { ProductGrid, SectionHeading } from '@/components/storefront/product-card'
 import { ProductReviews } from '@/components/storefront/product-reviews'
 import { WishlistButton } from '@/components/storefront/wishlist-button'
+import { PinChecker } from '@/components/storefront/pin-checker'
 import { formatPrice } from '@/lib/money'
 
 export async function generateMetadata({
@@ -113,6 +114,8 @@ export default async function ProductDetailPage({
               productName={product.name}
               className="mt-3 w-full"
             />
+
+            <PinChecker />
 
             <div className="mt-9 border-t border-hairline pt-7">
               <h2 className="label-caps mb-3">Description</h2>

@@ -92,6 +92,18 @@ export const couponService = {
 
 // -------------------------------------------------------------- shipping
 
+/** A rate band. Bounds are inclusive-lower, exclusive-upper; null = unbounded. */
+export interface ShippingRate {
+  id?: string
+  label: string | null
+  minWeightGrams: number | null
+  maxWeightGrams: number | null
+  minSubtotal: number | null
+  maxSubtotal: number | null
+  amount: number
+  position: number
+}
+
 export interface ShippingMethod {
   id: string
   zoneId: string
@@ -101,12 +113,15 @@ export interface ShippingMethod {
   freeAbove: number | null
   minSubtotal: number | null
   maxSubtotal: number | null
+  maxWeightGrams: number | null
   minDays: number | null
   maxDays: number | null
   isCod: boolean
   codFee: number
+  provider: string | null
   isActive: boolean
   position: number
+  rates: ShippingRate[]
 }
 
 export interface ShippingZone {
@@ -116,13 +131,27 @@ export interface ShippingZone {
   regions: string[]
   isDefault: boolean
   isActive: boolean
+  /** False turns the zone into an explicit refusal. */
+  isServiceable: boolean
+  unserviceableMessage: string | null
   position: number
   methods: ShippingMethod[]
 }
 
 export const shippingAdminService = {
   zones: () =>
-    apiClient.get<{ zones: ShippingZone[] }>('/admin/shipping/zones').then((r) => r.data.zones),
+    apiClient
+      .get<{
+        zones: ShippingZone[]
+        provider: { name: string; canCreateShipments: boolean }
+      }>('/admin/shipping/zones')
+      .then((r) => r.data),
+
+  /** Replaces a method's bands wholesale — the editor sends the full set. */
+  saveRates: (methodId: string, rates: Array<Omit<ShippingRate, 'id'>>) =>
+    apiClient
+      .put<{ method: ShippingMethod }>(`/admin/shipping/methods/${methodId}/rates`, { rates })
+      .then((r) => r.data.method),
 
   createZone: (input: Partial<ShippingZone>) =>
     apiClient.post<{ zone: ShippingZone }>('/admin/shipping/zones', input).then((r) => r.data.zone),
@@ -164,13 +193,34 @@ export interface AdminShipment {
   trackingNumber: string | null
   trackingUrl: string | null
   weightGrams: number | null
+  lengthMm: number | null
+  widthMm: number | null
+  heightMm: number | null
+  /** Carrier references. Null when the parcel was booked by hand. */
+  provider: string | null
+  providerShipmentId: string | null
+  labelUrl: string | null
+  dispatchedBy: string | null
+  packedAt: string | null
   shippedAt: string | null
   deliveredAt: string | null
   estimatedAt: string | null
+  /** Raised by a carrier exception, or by an event that arrived out of order. */
+  needsReview: boolean
+  reviewReason: string | null
   notes: string | null
   createdAt: string
   items: Array<{ id: string; orderItemId: string; quantity: number; orderItem: { productNameSnapshot: string; variantNameSnapshot: string | null } }>
-  events: Array<{ id: string; status: string; message: string | null; location: string | null; occurredAt: string }>
+  events: Array<{
+    id: string
+    status: string
+    message: string | null
+    location: string | null
+    occurredAt: string
+    source: string
+    providerStatus: string | null
+    ignoredForStatus: boolean
+  }>
 }
 
 export const shipmentService = {
@@ -186,20 +236,49 @@ export const shipmentService = {
       carrier?: string | null
       trackingNumber?: string | null
       weightGrams?: number | null
+      lengthMm?: number | null
+      widthMm?: number | null
+      heightMm?: number | null
       estimatedAt?: string | null
       notes?: string | null
+      dispatchedBy?: string | null
+      bookWithProvider?: boolean
     },
   ) =>
     apiClient
-      .post<{ shipment: AdminShipment; fullyShipped: boolean }>(
-        `/admin/shipments/orders/${orderId}`,
-        input,
-      )
+      .post<{
+        shipment: AdminShipment
+        fullyShipped: boolean
+        booked: boolean
+        bookingError?: string
+      }>(`/admin/shipments/orders/${orderId}`, input)
       .then((r) => r.data),
+
+  /** Books, or retries booking, an existing parcel with the carrier. */
+  book: (id: string) =>
+    apiClient
+      .post<{ shipment: AdminShipment }>(`/admin/shipments/${id}/book`)
+      .then((r) => r.data.shipment),
+
+  /** Clears the review flag once an operator has looked at the parcel. */
+  markReviewed: (id: string) =>
+    apiClient
+      .post<{ shipment: AdminShipment }>(`/admin/shipments/${id}/reviewed`)
+      .then((r) => r.data.shipment),
 
   updateTracking: (
     id: string,
-    input: { carrier?: string | null; trackingNumber?: string | null; estimatedAt?: string | null; notes?: string | null },
+    input: {
+      carrier?: string | null
+      trackingNumber?: string | null
+      estimatedAt?: string | null
+      notes?: string | null
+      weightGrams?: number | null
+      lengthMm?: number | null
+      widthMm?: number | null
+      heightMm?: number | null
+      dispatchedBy?: string | null
+    },
   ) =>
     apiClient
       .patch<{ shipment: AdminShipment }>(`/admin/shipments/${id}`, input)

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import {
   shippingAdminService,
   type ShippingMethod,
+  type ShippingRate,
   type ShippingZone,
 } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
@@ -32,6 +33,7 @@ export default function AdminShippingPage() {
   const editable = can('shipping.manage')
 
   const [zones, setZones] = useState<ShippingZone[]>([])
+  const [provider, setProvider] = useState<{ name: string; canCreateShipments: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -40,6 +42,7 @@ export default function AdminShippingPage() {
   const [editingMethod, setEditingMethod] = useState<
     { zoneId: string; method?: ShippingMethod } | null
   >(null)
+  const [editingRates, setEditingRates] = useState<ShippingMethod | null>(null)
   const [confirming, setConfirming] = useState<
     { kind: 'zone' | 'method'; id: string; name: string } | null
   >(null)
@@ -48,7 +51,9 @@ export default function AdminShippingPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setZones(await shippingAdminService.zones())
+      const result = await shippingAdminService.zones()
+      setZones(result.zones)
+      setProvider(result.provider)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load shipping zones')
@@ -86,8 +91,17 @@ export default function AdminShippingPage() {
         <div>
           <h1 className="display text-2xl">Shipping</h1>
           <p className="mt-1 text-sm text-ink-soft">
-            Zones decide where you deliver; methods decide what it costs.
+            Zones decide where you deliver, methods decide what it costs, and rate bands price a
+            parcel by its weight.
           </p>
+          {provider && (
+            <p className="mt-1 text-xs text-ink-soft">
+              Carrier: <span className="text-ink">{provider.name}</span> —{' '}
+              {provider.canCreateShipments
+                ? 'parcels are booked automatically'
+                : 'parcels are booked by hand and the tracking number entered here'}
+            </p>
+          )}
         </div>
         {editable && (
           <Button size="sm" onClick={() => setEditingZone('new')}>
@@ -123,6 +137,18 @@ export default function AdminShippingPage() {
         />
       )}
 
+      {editingRates && (
+        <RateBandsForm
+          method={editingRates}
+          onDone={async () => {
+            setEditingRates(null)
+            setNotice('Rate bands saved.')
+            await load()
+          }}
+          onCancel={() => setEditingRates(null)}
+        />
+      )}
+
       {loading ? (
         <SkeletonRows rows={4} className="mt-5" />
       ) : zones.length === 0 ? (
@@ -141,12 +167,21 @@ export default function AdminShippingPage() {
                   <h2 className="display text-lg">
                     {zone.name}
                     {zone.isDefault && <span className="badge badge-info ml-2">Fallback</span>}
+                    {!zone.isServiceable && (
+                      <span className="badge badge-danger ml-2">Not serviced</span>
+                    )}
                     {!zone.isActive && <span className="badge badge-neutral ml-2">Inactive</span>}
                   </h2>
                   <p className="mt-1 text-xs text-ink-soft">
                     {zone.countries.join(', ')}
                     {zone.regions.length > 0 ? ` — ${zone.regions.join(', ')}` : ' — everywhere in those countries'}
                   </p>
+                  {!zone.isServiceable && (
+                    <p className="mt-1 text-xs text-danger">
+                      Addresses matching this zone are refused at checkout.
+                      {zone.unserviceableMessage ? ` “${zone.unserviceableMessage}”` : ''}
+                    </p>
+                  )}
                 </div>
 
                 {editable && (
@@ -165,7 +200,12 @@ export default function AdminShippingPage() {
                 )}
               </header>
 
-              {zone.methods.length === 0 ? (
+              {!zone.isServiceable ? (
+                <p className="p-5 text-sm text-ink-soft">
+                  This zone exists to refuse delivery, so it carries no methods. Because zones are
+                  matched in order, keep its position above the zones it should override.
+                </p>
+              ) : zone.methods.length === 0 ? (
                 <p className="p-5 text-sm text-ink-soft">
                   No delivery methods — nothing can be shipped to this zone yet.
                 </p>
@@ -196,10 +236,29 @@ export default function AdminShippingPage() {
                           )}
                         </td>
                         <td className="p-3">
-                          {method.rate === 0 ? 'Free' : formatPrice(method.rate)}
+                          {method.rates.length > 0 ? (
+                            <>
+                              <span>
+                                {formatPrice(Math.min(...method.rates.map((r) => r.amount)))} –{' '}
+                                {formatPrice(Math.max(...method.rates.map((r) => r.amount)))}
+                              </span>
+                              <span className="block text-xs text-ink-soft">
+                                {method.rates.length} weight bands
+                              </span>
+                            </>
+                          ) : method.rate === 0 ? (
+                            'Free'
+                          ) : (
+                            formatPrice(method.rate)
+                          )}
                           {method.isCod && method.codFee > 0 && (
                             <span className="block text-xs text-ink-soft">
                               + {formatPrice(method.codFee)} handling
+                            </span>
+                          )}
+                          {method.maxWeightGrams && (
+                            <span className="block text-xs text-ink-soft">
+                              up to {(method.maxWeightGrams / 1000).toFixed(1)} kg
                             </span>
                           )}
                         </td>
@@ -216,6 +275,9 @@ export default function AdminShippingPage() {
                         <td className="p-3 text-right">
                           {editable && (
                             <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => setEditingRates(method)}>
+                                Bands
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -286,6 +348,8 @@ function ZoneForm({
     regions: (zone?.regions ?? []).join(', '),
     isDefault: zone?.isDefault ?? false,
     isActive: zone?.isActive ?? true,
+    isServiceable: zone?.isServiceable ?? true,
+    unserviceableMessage: zone?.unserviceableMessage ?? '',
     position: String(zone?.position ?? 0),
   })
   const [saving, setSaving] = useState(false)
@@ -310,6 +374,8 @@ function ZoneForm({
       regions: list(form.regions),
       isDefault: form.isDefault,
       isActive: form.isActive,
+      isServiceable: form.isServiceable,
+      unserviceableMessage: form.unserviceableMessage || null,
       position: Number(form.position || 0),
     }
 
@@ -385,6 +451,43 @@ function ZoneForm({
           />
           Use as the fallback for addresses no other zone matches
         </label>
+
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-4 accent-[#5b6241]"
+            checked={!form.isServiceable}
+            onChange={(event) => setForm((f) => ({ ...f, isServiceable: !event.target.checked }))}
+          />
+          <span>
+            We do <strong>not</strong> deliver here
+            <span className="mt-0.5 block text-xs text-ink-soft">
+              Turns this zone into a refusal. Keep its position above the zones it overrides —
+              matching stops at the first zone that fits.
+            </span>
+          </span>
+        </label>
+
+        {!form.isServiceable && (
+          <div className="pl-7">
+            <Field
+              label="What the customer is told"
+              htmlFor="zone-msg"
+              hint="Shown at checkout and on the PIN checker."
+            >
+              <Input
+                id="zone-msg"
+                maxLength={300}
+                value={form.unserviceableMessage}
+                onChange={(event) =>
+                  setForm((f) => ({ ...f, unserviceableMessage: event.target.value }))
+                }
+                placeholder="We are not able to deliver to that PIN code yet."
+              />
+            </Field>
+          </div>
+        )}
+
         <label className="flex cursor-pointer items-center gap-2.5 text-sm">
           <input
             type="checkbox"
@@ -424,6 +527,7 @@ function MethodForm({
     description: method?.description ?? '',
     rate: String((method?.rate ?? 0) / 100),
     freeAbove: method?.freeAbove ? String(method.freeAbove / 100) : '',
+    maxWeightGrams: method?.maxWeightGrams != null ? String(method.maxWeightGrams / 1000) : '',
     minDays: method?.minDays != null ? String(method.minDays) : '',
     maxDays: method?.maxDays != null ? String(method.maxDays) : '',
     isCod: method?.isCod ?? false,
@@ -448,6 +552,8 @@ function MethodForm({
       description: form.description || null,
       rate: paise(form.rate),
       freeAbove: form.freeAbove ? paise(form.freeAbove) : null,
+      // Entered in kilograms, stored in grams.
+      maxWeightGrams: form.maxWeightGrams ? Math.round(Number(form.maxWeightGrams) * 1000) : null,
       minDays: form.minDays ? Number(form.minDays) : null,
       maxDays: form.maxDays ? Number(form.maxDays) : null,
       isCod: form.isCod,
@@ -511,6 +617,21 @@ function MethodForm({
             min={0}
             value={form.freeAbove}
             onChange={(event) => setForm((f) => ({ ...f, freeAbove: event.target.value }))}
+          />
+        </Field>
+
+        <Field
+          label="Carrier weight limit (kg)"
+          htmlFor="m-maxw"
+          hint="Heavier parcels are not offered this method. Leave empty for no limit."
+        >
+          <Input
+            id="m-maxw"
+            type="number"
+            min={0}
+            step="0.1"
+            value={form.maxWeightGrams}
+            onChange={(event) => setForm((f) => ({ ...f, maxWeightGrams: event.target.value }))}
           />
         </Field>
 
@@ -590,5 +711,166 @@ function MethodForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+/**
+ * Weight-band editor (FR-21.2).
+ *
+ * Bands are entered in kilograms and rupees and stored in grams and paise.
+ * Bounds are inclusive-lower and exclusive-upper, so "up to 0.5" and
+ * "0.5 to 2" meet without overlapping and 500 g falls in the second band —
+ * the hint says so, because getting that backwards is the easy mistake.
+ *
+ * Leaving the table empty falls back to the method's flat rate.
+ */
+function RateBandsForm({
+  method,
+  onDone,
+  onCancel,
+}: {
+  method: ShippingMethod
+  onDone: () => void | Promise<void>
+  onCancel: () => void
+}) {
+  const toRow = (rate: ShippingRate) => ({
+    label: rate.label ?? '',
+    minWeight: rate.minWeightGrams != null ? String(rate.minWeightGrams / 1000) : '',
+    maxWeight: rate.maxWeightGrams != null ? String(rate.maxWeightGrams / 1000) : '',
+    minSubtotal: rate.minSubtotal != null ? String(rate.minSubtotal / 100) : '',
+    maxSubtotal: rate.maxSubtotal != null ? String(rate.maxSubtotal / 100) : '',
+    amount: String(rate.amount / 100),
+  })
+
+  const [rows, setRows] = useState(method.rates.map(toRow))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const set = (index: number, key: keyof (typeof rows)[number], value: string) =>
+    setRows((current) =>
+      current.map((row, i) => (i === index ? { ...row, [key]: value } : row)),
+    )
+
+  const grams = (value: string) => (value ? Math.round(Number(value) * 1000) : null)
+  const paise = (value: string) => (value ? Math.round(Number(value) * 100) : null)
+
+  async function save() {
+    if (saving) return
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await shippingAdminService.saveRates(
+        method.id,
+        rows.map((row, index) => ({
+          label: row.label || null,
+          minWeightGrams: grams(row.minWeight),
+          maxWeightGrams: grams(row.maxWeight),
+          minSubtotal: paise(row.minSubtotal),
+          maxSubtotal: paise(row.maxSubtotal),
+          amount: Math.round(Number(row.amount || 0) * 100),
+          position: index,
+        })),
+      )
+      await onDone()
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not save those bands')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="border border-rule bg-white p-6">
+      <h2 className="display mb-1 text-lg">Rate bands — {method.name}</h2>
+      <p className="mb-5 text-sm text-ink-soft">
+        The first band that fits the parcel wins. Weights are inclusive at the lower end and
+        exclusive at the upper, so a 0.5 kg parcel falls into a band starting at 0.5. With no bands,
+        the flat rate of {formatPrice(method.rate)} applies.
+      </p>
+
+      {error && <Alert>{error}</Alert>}
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-ink-soft">No bands — the flat rate applies to every parcel.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left text-xs text-ink-soft">
+                <th className="p-2 font-normal">Label</th>
+                <th className="p-2 font-normal">From (kg)</th>
+                <th className="p-2 font-normal">To (kg)</th>
+                <th className="p-2 font-normal">Order from (₹)</th>
+                <th className="p-2 font-normal">Order to (₹)</th>
+                <th className="p-2 font-normal">Charge (₹)</th>
+                <th className="p-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index} className="border-b border-hairline last:border-0">
+                  <td className="p-2">
+                    <Input
+                      aria-label={`Label for band ${index + 1}`}
+                      value={row.label}
+                      onChange={(event) => set(index, 'label', event.target.value)}
+                      placeholder="Up to 500 g"
+                    />
+                  </td>
+                  {(['minWeight', 'maxWeight', 'minSubtotal', 'maxSubtotal', 'amount'] as const).map(
+                    (key) => (
+                      <td key={key} className="p-2">
+                        <Input
+                          aria-label={`${key} for band ${index + 1}`}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row[key]}
+                          onChange={(event) => set(index, key, event.target.value)}
+                          className="w-24"
+                        />
+                      </td>
+                    ),
+                  )}
+                  <td className="p-2 text-right">
+                    <button
+                      type="button"
+                      aria-label={`Remove band ${index + 1}`}
+                      onClick={() => setRows((current) => current.filter((_, i) => i !== index))}
+                      className="text-ink-soft hover:text-danger"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() =>
+            setRows((current) => [
+              ...current,
+              { label: '', minWeight: '', maxWeight: '', minSubtotal: '', maxSubtotal: '', amount: '' },
+            ])
+          }
+        >
+          <Plus className="size-3.5" strokeWidth={2} />
+          Add a band
+        </Button>
+        <Button size="sm" loading={saving} onClick={() => void save()}>
+          Save bands
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
   )
 }

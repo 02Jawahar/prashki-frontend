@@ -35,16 +35,35 @@ export interface ShippingQuote {
   maxDays: number | null
 }
 
+export interface ServiceabilityAnswer {
+  serviceable: boolean
+  codAvailable: boolean
+  zone: { id: string; name: string } | null
+  reason: string | null
+  estimate: { minDays: number; maxDays: number } | null
+}
+
 export const shippingService = {
   /**
-   * The basket value comes from the server's copy of the cart, so the query
-   * only carries the destination.
+   * The basket value and parcel weight come from the server's copy of the
+   * cart, so the query only carries the destination.
    */
   quote: (destination: { country?: string; state?: string; postalCode?: string }) =>
     apiClient
-      .get<{ zone: { id: string; name: string } | null; methods: ShippingQuote[]; deliverable: boolean }>(
-        `/shipping/quote${qs({ country: 'IN', ...destination })}`,
-      )
+      .get<{
+        zone: { id: string; name: string } | null
+        methods: ShippingQuote[]
+        serviceable: boolean
+        reason: string | null
+        weightGrams: number
+        deliverable: boolean
+      }>(`/shipping/quote${qs({ country: 'IN', ...destination })}`)
+      .then((r) => r.data),
+
+  /** "Do you deliver to my PIN?" — cart-independent, so a product page can ask. */
+  serviceability: (postalCode: string, country = 'IN') =>
+    apiClient
+      .get<ServiceabilityAnswer>(`/shipping/serviceability${qs({ postalCode, country })}`)
       .then((r) => r.data),
 }
 

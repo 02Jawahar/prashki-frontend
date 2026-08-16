@@ -32,6 +32,8 @@ export function CheckoutClient() {
   const [methodId, setMethodId] = useState<string | null>(null)
   const [quoting, setQuoting] = useState(false)
   const [deliverable, setDeliverable] = useState(true)
+  /** The server's own explanation — "too heavy", "we don't reach that PIN". */
+  const [deliveryReason, setDeliveryReason] = useState<string | null>(null)
 
   /**
    * One key per checkout attempt, minted when the page mounts and reused for
@@ -81,7 +83,8 @@ export function CheckoutClient() {
       .then((result) => {
         if (cancelled) return
         setMethods(result.methods)
-        setDeliverable(result.deliverable)
+        setDeliverable(result.serviceable)
+        setDeliveryReason(result.reason)
         // Keep the current choice if it survived; otherwise take the cheapest.
         setMethodId((current) =>
           current && result.methods.some((m) => m.id === current)
@@ -329,8 +332,9 @@ export function CheckoutClient() {
               <SkeletonRows rows={2} />
             ) : !deliverable || methods.length === 0 ? (
               <Alert tone="danger">
-                We cannot deliver to {selected.city} {selected.postalCode} at the moment. Try another
-                address, or write to us and we will see what we can do.
+                {deliveryReason ??
+                  `We cannot deliver to ${selected.city} ${selected.postalCode} at the moment.`}{' '}
+                Try another address, or write to us and we will see what we can do.
               </Alert>
             ) : (
               <ul className="space-y-3">
