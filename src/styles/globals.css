@@ -134,6 +134,85 @@ body {
   background: linear-gradient(to left, transparent, var(--color-sage-400));
 }
 
+/* ------------------------------------------------------------ CMS prose */
+
+/*
+ * Typography for editor-authored HTML. Kept deliberately narrow: the sanitizer
+ * only allows a small set of tags through, and these are all of them.
+ */
+.prose-pk {
+  font-size: 0.92rem;
+  line-height: 1.75;
+  color: var(--color-ink-soft);
+}
+.prose-pk > * + * {
+  margin-top: 1.1em;
+}
+.prose-pk h2,
+.prose-pk h3,
+.prose-pk h4 {
+  font-family: var(--font-display);
+  color: var(--color-ink);
+  line-height: 1.25;
+  margin-top: 2em;
+}
+.prose-pk h2 {
+  font-size: 1.5rem;
+}
+.prose-pk h3 {
+  font-size: 1.2rem;
+}
+.prose-pk h4 {
+  font-size: 1rem;
+}
+.prose-pk strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.prose-pk a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+.prose-pk ul,
+.prose-pk ol {
+  padding-left: 1.25rem;
+}
+.prose-pk ul {
+  list-style: disc;
+}
+.prose-pk ol {
+  list-style: decimal;
+}
+.prose-pk li + li {
+  margin-top: 0.4em;
+}
+.prose-pk blockquote {
+  border-left: 2px solid var(--color-sage-300);
+  padding-left: 1.25rem;
+  font-style: italic;
+}
+.prose-pk hr {
+  border: 0;
+  border-top: 1px solid var(--color-rule);
+  margin-block: 2.5em;
+}
+.prose-pk table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.prose-pk th,
+.prose-pk td {
+  border-bottom: 1px solid var(--color-hairline);
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+}
+.prose-pk th {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
 /* --------------------------------------------------------------- buttons */
 
 .btn {

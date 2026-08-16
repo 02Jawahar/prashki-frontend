@@ -8,7 +8,7 @@ import { adminService } from '@/services/admin.service'
 import { ProductForm } from '@/components/admin/product-form'
 import { ProductImages } from '@/components/admin/product-images'
 import { ProductVariants } from '@/components/admin/product-variants'
-import { Alert, Button, Spinner, StatusBadge } from '@/components/ui'
+import { Alert, Button, ConfirmDialog, Spinner, StatusBadge } from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { ProductDetail } from '@/types/api'
 
@@ -22,6 +22,7 @@ export default function EditProductPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -58,12 +59,14 @@ export default function EditProductPage() {
       const res = await adminService.deleteProduct(product.id)
       if (res.archived) {
         setNotice(res.message ?? 'Archived instead of deleted.')
+        setConfirmingDelete(false)
         await load()
       } else {
         router.push('/admin/products')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete the product')
+      setConfirmingDelete(false)
     } finally {
       setBusy(false)
     }
@@ -110,7 +113,7 @@ export default function EditProductPage() {
             </Button>
           )}
           {can('product.delete') && (
-            <Button variant="danger" size="sm" loading={busy} onClick={() => void onDelete()}>
+            <Button variant="danger" size="sm" loading={busy} onClick={() => setConfirmingDelete(true)}>
               Delete
             </Button>
           )}
@@ -135,6 +138,16 @@ export default function EditProductPage() {
         />
         <ProductVariants product={product} onChange={setProduct} />
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title={`Delete ${product.name}?`}
+        body="A product that appears on any order is archived instead, so that order keeps its history. Otherwise this cannot be undone."
+        confirmLabel="Delete"
+        loading={busy}
+        onConfirm={() => void onDelete()}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   )
 }

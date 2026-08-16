@@ -2,13 +2,26 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { adminService } from '@/services/admin.service'
+import { refundService } from '@/services/admin-modules.service'
+import { ApiRequestError } from '@/services/api-client'
+import { OrderShipments } from '@/components/admin/order-shipments'
 import { formatPrice } from '@/lib/money'
 import { formatDateTime } from '@/lib/utils'
-import { Alert, Button, Select, SkeletonRows, StatusBadge, Textarea } from '@/components/ui'
+import {
+  Alert,
+  Button,
+  ConfirmDialog,
+  Field,
+  Input,
+  Select,
+  SkeletonRows,
+  StatusBadge,
+  Textarea,
+} from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { Order, OrderStatus } from '@/services/order.service'
 
@@ -37,17 +50,45 @@ export default function AdminOrderDetailPage() {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        setOrder(await adminService.order(id))
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load the order')
-      } finally {
-        setLoading(false)
-      }
-    })()
+  const [internalNotes, setInternalNotes] = useState('')
+  const [notesSaving, setNotesSaving] = useState(false)
+
+  const [money, setMoney] = useState<{ paid: number; refunded: number; refundable: number } | null>(null)
+  const [refunds, setRefunds] = useState<
+    Array<{ id: string; amount: number; status: string; reason: string | null; createdAt: string }>
+  >([])
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundReason, setRefundReason] = useState('')
+  const [confirmingRefund, setConfirmingRefund] = useState(false)
+
+  const load = useCallback(async () => {
+    try {
+      const result = await adminService.order(id)
+      setOrder(result)
+      setInternalNotes(result.internalNotes ?? '')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load the order')
+    } finally {
+      setLoading(false)
+    }
   }, [id])
+
+  const loadMoney = useCallback(async () => {
+    if (!can('order.read')) return
+    try {
+      const result = await refundService.forOrder(id)
+      setMoney({ paid: result.paid, refunded: result.refunded, refundable: result.refundable })
+      setRefunds(result.refunds)
+      setRefundAmount(String(result.refundable / 100))
+    } catch {
+      // Refund figures are supplementary; the order still renders without them.
+    }
+  }, [id, can])
+
+  useEffect(() => {
+    void load()
+    void loadMoney()
+  }, [load, loadMoney])
 
   async function apply() {
     if (!next || !order) return
@@ -64,8 +105,46 @@ export default function AdminOrderDetailPage() {
           ? 'Order cancelled and stock returned to inventory.'
           : `Status updated to ${next.replace(/_/g, ' ').toLowerCase()}.`,
       )
+      await loadMoney()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update the status')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveNotes() {
+    if (!order) return
+
+    setNotesSaving(true)
+    setError(null)
+    try {
+      setOrder(await adminService.setOrderInternalNotes(order.id, internalNotes))
+      setNotice('Notes saved.')
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not save those notes')
+    } finally {
+      setNotesSaving(false)
+    }
+  }
+
+  async function issueRefund() {
+    if (!order) return
+
+    setBusy(true)
+    setError(null)
+    try {
+      await refundService.create({
+        orderId: order.id,
+        amount: Math.round(Number(refundAmount) * 100),
+        reason: refundReason || undefined,
+      })
+      setConfirmingRefund(false)
+      setRefundReason('')
+      setNotice('Refund sent to the gateway.')
+      await loadMoney()
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not issue that refund')
     } finally {
       setBusy(false)
     }
@@ -134,8 +213,16 @@ export default function AdminOrderDetailPage() {
 
             <dl className="space-y-2 border-t border-rule p-5 text-sm">
               <Row label="Subtotal" value={formatPrice(order.subtotal)} />
-              {order.discount > 0 && <Row label="Discount" value={`−${formatPrice(order.discount)}`} />}
-              <Row label="Shipping" value={order.shipping === 0 ? 'Free' : formatPrice(order.shipping)} />
+              {order.discount > 0 && (
+                <Row
+                  label={order.couponCode ? `Discount (${order.couponCode})` : 'Discount'}
+                  value={`−${formatPrice(order.discount)}`}
+                />
+              )}
+              <Row
+                label={order.shippingMethodName ? `Shipping — ${order.shippingMethodName}` : 'Shipping'}
+                value={order.shipping === 0 ? 'Free' : formatPrice(order.shipping)}
+              />
               {order.tax > 0 && <Row label="Tax" value={formatPrice(order.tax)} />}
               <div className="flex justify-between border-t border-hairline pt-2.5 text-base">
                 <dt className="label-caps">Total</dt>
@@ -143,6 +230,14 @@ export default function AdminOrderDetailPage() {
               </div>
             </dl>
           </section>
+
+          <OrderShipments
+            orderId={order.id}
+            items={order.items}
+            onChanged={async () => {
+              await load()
+            }}
+          />
 
           <section className="border border-rule bg-white p-5">
             <h2 className="label-caps mb-4">Status history</h2>
@@ -262,14 +357,107 @@ export default function AdminOrderDetailPage() {
             )}
           </section>
 
+          {can('refund.create') && money && money.paid > 0 && (
+            <section className="border border-rule bg-white p-5">
+              <h2 className="label-caps mb-3">Refunds</h2>
+
+              <dl className="space-y-2 text-sm">
+                <Row label="Captured" value={formatPrice(money.paid)} />
+                <Row label="Refunded" value={formatPrice(money.refunded)} />
+                <Row label="Still refundable" value={formatPrice(money.refundable)} />
+              </dl>
+
+              {money.refundable > 0 ? (
+                <div className="mt-4 space-y-3">
+                  <Field label="Amount (₹)" htmlFor="refund">
+                    <Input
+                      id="refund"
+                      type="number"
+                      min={1}
+                      max={money.refundable / 100}
+                      step="0.01"
+                      value={refundAmount}
+                      onChange={(event) => setRefundAmount(event.target.value)}
+                    />
+                  </Field>
+                  <Input
+                    aria-label="Refund reason"
+                    placeholder="Reason (optional)"
+                    value={refundReason}
+                    onChange={(event) => setRefundReason(event.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    disabled={
+                      !refundAmount ||
+                      Number(refundAmount) <= 0 ||
+                      Math.round(Number(refundAmount) * 100) > money.refundable
+                    }
+                    onClick={() => setConfirmingRefund(true)}
+                  >
+                    Issue refund
+                  </Button>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-ink-soft">Nothing left to refund.</p>
+              )}
+
+              {refunds.length > 0 && (
+                <ul className="mt-4 space-y-2 border-t border-hairline pt-3 text-xs">
+                  {refunds.map((refund) => (
+                    <li key={refund.id} className="flex items-center justify-between gap-2">
+                      <span>
+                        {formatPrice(refund.amount)}
+                        <span className="ml-2 text-ink-soft">{formatDateTime(refund.createdAt)}</span>
+                      </span>
+                      <StatusBadge status={refund.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+
           {order.notes && (
             <section className="border border-rule bg-white p-5">
               <h2 className="label-caps mb-2">Customer note</h2>
               <p className="text-sm text-ink-soft">{order.notes}</p>
             </section>
           )}
+
+          {can('order.update') && (
+            <section className="border border-rule bg-white p-5">
+              <h2 className="label-caps mb-2">Internal notes</h2>
+              <p className="mb-3 text-xs text-ink-soft">Staff only — the customer never sees this.</p>
+              <Textarea
+                rows={4}
+                maxLength={4000}
+                value={internalNotes}
+                onChange={(event) => setInternalNotes(event.target.value)}
+              />
+              <Button
+                size="sm"
+                className="mt-3 w-full"
+                loading={notesSaving}
+                onClick={() => void saveNotes()}
+              >
+                Save notes
+              </Button>
+            </section>
+          )}
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmingRefund}
+        title={`Refund ₹${refundAmount}?`}
+        body="This sends money back through the payment gateway. It cannot be undone from here."
+        confirmLabel="Send refund"
+        loading={busy}
+        onConfirm={() => void issueRefund()}
+        onCancel={() => setConfirmingRefund(false)}
+      />
     </div>
   )
 }

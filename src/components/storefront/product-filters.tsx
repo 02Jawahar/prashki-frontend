@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { Button, Input, Select } from '@/components/ui'
 import type { Category } from '@/types/api'
+import type { Facets } from '@/services/product.service'
 
 const SORTS = [
   { value: 'featured', label: 'Featured' },
@@ -12,6 +13,7 @@ const SORTS = [
   { value: 'oldest', label: 'Oldest' },
   { value: 'price-asc', label: 'Price, low to high' },
   { value: 'price-desc', label: 'Price, high to low' },
+  { value: 'rating', label: 'Best rated' },
   { value: 'name-asc', label: 'Alphabetically, A–Z' },
   { value: 'name-desc', label: 'Alphabetically, Z–A' },
 ]
@@ -19,10 +21,12 @@ const SORTS = [
 /** Filter and sort bar. State lives in the URL so results are shareable. */
 export function ProductFilters({
   categories,
+  facets,
   total,
   showCategory = true,
 }: {
   categories: Category[]
+  facets?: Facets
   total: number
   showCategory?: boolean
 }) {
@@ -35,7 +39,21 @@ export function ProductFilters({
   const inStock = params.get('inStock') === 'true'
   const minPrice = params.get('minPrice')
   const maxPrice = params.get('maxPrice')
-  const activeCount = (category ? 1 : 0) + (inStock ? 1 : 0) + (minPrice || maxPrice ? 1 : 0)
+
+  /**
+   * The single `attributes` param holds every facet selection. Parsing it into
+   * a set keeps the checkbox state and the URL as one source of truth — there
+   * is no local copy to fall out of sync.
+   */
+  const selected = new Set(
+    (params.get('attributes') ?? '')
+      .split(',')
+      .map((pair) => pair.trim())
+      .filter(Boolean),
+  )
+
+  const activeCount =
+    (category ? 1 : 0) + (inStock ? 1 : 0) + (minPrice || maxPrice ? 1 : 0) + selected.size
 
   const push = useCallback(
     (next: URLSearchParams) => {
@@ -51,6 +69,18 @@ export function ProductFilters({
     if (!value) next.delete(key)
     else next.set(key, value)
     push(next)
+  }
+
+  const toggleFacet = (attribute: string, value: string) => {
+    const key = `${attribute}:${value}`
+    const next = new Set(selected)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+
+    const query = new URLSearchParams(params.toString())
+    if (next.size === 0) query.delete('attributes')
+    else query.set('attributes', [...next].join(','))
+    push(query)
   }
 
   const clearAll = () => {
@@ -109,6 +139,18 @@ export function ProductFilters({
             />
           )}
           {inStock && <Chip label="In stock" onRemove={() => setParam('inStock', null)} />}
+          {[...selected].map((key) => {
+            const [attribute, value] = key.split(':')
+            const group = facets?.attributes.find((a) => a.slug === attribute)
+            const option = group?.values.find((v) => v.slug === value)
+            return (
+              <Chip
+                key={key}
+                label={option ? `${group!.name}: ${option.value}` : key}
+                onRemove={() => toggleFacet(attribute, value)}
+              />
+            )
+          })}
           {(minPrice || maxPrice) && (
             <Chip
               label="Price"
@@ -150,6 +192,58 @@ export function ProductFilters({
                   </Select>
                 </Block>
               )}
+
+              {facets?.attributes.map((attribute) => (
+                <Block key={attribute.slug} heading={attribute.name}>
+                  <ul className={attribute.isSwatch ? 'flex flex-wrap gap-2' : 'space-y-2.5'}>
+                    {attribute.values.map((value) => {
+                      const checked = selected.has(`${attribute.slug}:${value.slug}`)
+
+                      // Swatches read as colour, so they are rendered as
+                      // pressable chips rather than a list of checkboxes.
+                      if (attribute.isSwatch) {
+                        return (
+                          <li key={value.slug}>
+                            <button
+                              type="button"
+                              aria-pressed={checked}
+                              onClick={() => toggleFacet(attribute.slug, value.slug)}
+                              title={`${value.value} (${value.count})`}
+                              className={`flex items-center gap-2 border px-2.5 py-1.5 text-xs transition-colors ${
+                                checked ? 'border-ink' : 'border-rule hover:border-ink'
+                              }`}
+                            >
+                              {value.colorHex && (
+                                <span
+                                  className="size-3.5 rounded-full border border-rule"
+                                  style={{ backgroundColor: value.colorHex }}
+                                  aria-hidden
+                                />
+                              )}
+                              {value.value}
+                            </button>
+                          </li>
+                        )
+                      }
+
+                      return (
+                        <li key={value.slug}>
+                          <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleFacet(attribute.slug, value.slug)}
+                              className="size-4 accent-[#5b6241]"
+                            />
+                            {value.value}
+                            <span className="text-xs text-ink-soft">({value.count})</span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </Block>
+              ))}
 
               <Block heading="Availability">
                 <label className="flex cursor-pointer items-center gap-2.5 text-sm">

@@ -50,6 +50,8 @@ export function SiteFooter({ nav, settings }: { nav: NavItem[]; settings: StoreS
             links={[
               { href: '/account', label: 'Your account' },
               { href: '/account/orders', label: 'Orders' },
+              { href: '/account/returns', label: 'Returns' },
+              { href: '/account/wishlist', label: 'Wishlist' },
               { href: '/cart', label: 'Bag' },
             ]}
           />
@@ -67,13 +69,46 @@ export function SiteFooter({ nav, settings }: { nav: NavItem[]; settings: StoreS
               {phone && <li>{phone}</li>}
               <li>Monday to Saturday, 10am – 6pm IST</li>
             </ul>
+
+            {/* CMS pages, seeded and editable from admin. */}
+            <ul className="mt-6 space-y-2.5">
+              {[
+                { href: '/about', label: 'About us' },
+                { href: '/contact', label: 'Contact' },
+                { href: '/shipping-policy', label: 'Shipping' },
+                { href: '/returns-policy', label: 'Returns policy' },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="link-underline text-[0.85rem] text-ink-soft hover:text-ink"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-3 border-t border-rule pt-7 text-[0.75rem] text-ink-soft md:flex-row">
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-rule pt-7 text-[0.75rem] text-ink-soft md:flex-row">
           <p>
             &copy; {new Date().getFullYear()} {storeName}. All rights reserved.
           </p>
+
+          <ul className="flex gap-5">
+            {[
+              { href: '/privacy-policy', label: 'Privacy' },
+              { href: '/terms', label: 'Terms' },
+            ].map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="link-underline hover:text-ink">
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
           <p className="eyebrow text-[0.6rem] text-sage-700">Made to order</p>
         </div>
       </div>

@@ -29,8 +29,22 @@ export function toProductQuery(sp: SearchParams, overrides: Partial<ProductQuery
     'price-desc',
     'name-asc',
     'name-desc',
+    'rating',
   ])
   const sort = one('sort')
+
+  /**
+   * Facets arrive as "size:m,colour:sage". Anything that is not a clean
+   * slug:slug pair is dropped rather than forwarded — the API would reject it,
+   * and a malformed filter should narrow nothing rather than error the page.
+   */
+  const attributes = one('attributes')
+    ?.split(',')
+    .map((pair) => pair.trim().toLowerCase())
+    .filter((pair) => /^[a-z0-9-]+:[a-z0-9-]+$/.test(pair))
+    .join(',')
+
+  const rating = num('minRating')
 
   return {
     q: one('q'),
@@ -39,6 +53,8 @@ export function toProductQuery(sp: SearchParams, overrides: Partial<ProductQuery
     minPrice: num('minPrice'),
     maxPrice: num('maxPrice'),
     inStock: one('inStock') === 'true' ? true : undefined,
+    attributes: attributes || undefined,
+    minRating: rating && rating >= 1 && rating <= 5 ? rating : undefined,
     page: Math.max(1, num('page') ?? 1),
     perPage: 12,
     ...overrides,

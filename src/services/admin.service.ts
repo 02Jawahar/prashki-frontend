@@ -188,6 +188,12 @@ export const adminService = {
       .patch<{ order: AdminOrder }>(`/admin/orders/${id}/status`, { status, note })
       .then((r) => r.data.order),
 
+  /** Staff-only. Never returned on a customer-facing endpoint. */
+  setOrderInternalNotes: (id: string, internalNotes: string) =>
+    apiClient
+      .patch<{ order: AdminOrder }>(`/admin/orders/${id}/internal-notes`, { internalNotes })
+      .then((r) => r.data.order),
+
   // ------------------------------------------------------------ customers
   customers: (query: { q?: string; page?: number; perPage?: number } = {}) =>
     apiClient

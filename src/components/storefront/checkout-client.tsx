@@ -9,6 +9,7 @@ import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
 import { addressService, orderService, type Address } from '@/services/order.service'
 import { paymentService } from '@/services/payment.service'
+import { shippingService, type ShippingQuote } from '@/services/storefront.service'
 import { loadRazorpay } from '@/lib/razorpay'
 import { ApiRequestError } from '@/services/api-client'
 import { formatPrice } from '@/lib/money'
@@ -27,6 +28,18 @@ export function CheckoutClient() {
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [methods, setMethods] = useState<ShippingQuote[]>([])
+  const [methodId, setMethodId] = useState<string | null>(null)
+  const [quoting, setQuoting] = useState(false)
+  const [deliverable, setDeliverable] = useState(true)
+
+  /**
+   * One key per checkout attempt, minted when the page mounts and reused for
+   * every retry. It is what makes a double-click, or a retry after a dropped
+   * connection, resolve to a single order rather than two.
+   */
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+
   useEffect(() => {
     void (async () => {
       try {
@@ -41,6 +54,56 @@ export function CheckoutClient() {
       }
     })()
   }, [])
+
+  const selected = addresses.find((a) => a.id === selectedId) ?? null
+
+  /**
+   * Delivery options depend on where the parcel is going and what is in the
+   * bag, so the quote is refetched whenever either changes. The prices shown
+   * are re-derived server-side at checkout regardless — this is display only.
+   */
+  useEffect(() => {
+    if (!selected) {
+      setMethods([])
+      setMethodId(null)
+      return
+    }
+
+    let cancelled = false
+    setQuoting(true)
+
+    void shippingService
+      .quote({
+        country: selected.country,
+        state: selected.state,
+        postalCode: selected.postalCode,
+      })
+      .then((result) => {
+        if (cancelled) return
+        setMethods(result.methods)
+        setDeliverable(result.deliverable)
+        // Keep the current choice if it survived; otherwise take the cheapest.
+        setMethodId((current) =>
+          current && result.methods.some((m) => m.id === current)
+            ? current
+            : (result.methods[0]?.id ?? null),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setMethods([])
+      })
+      .finally(() => {
+        if (!cancelled) setQuoting(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selected, cart?.discountedSubtotal, cart?.freeShipping])
+
+  const chosenMethod = methods.find((m) => m.id === methodId) ?? null
+  const shippingCost = chosenMethod ? chosenMethod.cost + (chosenMethod.isCod ? chosenMethod.codFee : 0) : 0
+  const orderTotal = (cart?.discountedSubtotal ?? 0) + shippingCost
 
   /**
    * Order first, then payment (spec §31).
@@ -58,11 +121,26 @@ export function CheckoutClient() {
     let order
     try {
       // The server recomputes every figure; nothing sent from here is trusted.
-      order = await orderService.create({ addressId: selectedId, notes: notes || undefined })
+      // The key travels with it, so a retry lands on the same order.
+      const result = await orderService.create({
+        addressId: selectedId,
+        notes: notes || undefined,
+        shippingMethodId: methodId ?? undefined,
+        idempotencyKey,
+      })
+      order = result.order
       await refresh()
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : 'Could not place your order')
       setPlacing(false)
+
+      /**
+       * A rejected order means nothing was created under this key, but the
+       * request body is about to change (different stock, different address).
+       * A fresh key keeps the retry honest rather than replaying the old one.
+       */
+      setIdempotencyKey(crypto.randomUUID())
+
       // Stock or availability may have changed — resync so the user sees why.
       await refresh()
       return
@@ -243,6 +321,79 @@ export function CheckoutClient() {
           </section>
 
           <section>
+            <h2 className="label-caps mb-4">Delivery</h2>
+
+            {!selected ? (
+              <p className="text-sm text-ink-soft">Choose an address to see delivery options.</p>
+            ) : quoting ? (
+              <SkeletonRows rows={2} />
+            ) : !deliverable || methods.length === 0 ? (
+              <Alert tone="danger">
+                We cannot deliver to {selected.city} {selected.postalCode} at the moment. Try another
+                address, or write to us and we will see what we can do.
+              </Alert>
+            ) : (
+              <ul className="space-y-3">
+                {methods.map((method) => (
+                  <li key={method.id}>
+                    <button
+                      type="button"
+                      onClick={() => setMethodId(method.id)}
+                      className={`flex w-full items-start gap-3 border p-4 text-left transition-colors ${
+                        methodId === method.id ? 'border-sage-700 bg-sage-50' : 'border-rule hover:border-ink'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border ${
+                          methodId === method.id ? 'border-sage-700 bg-sage-700' : 'border-rule'
+                        }`}
+                      >
+                        {methodId === method.id && <Check className="size-2.5 text-white" strokeWidth={3} />}
+                      </span>
+
+                      <span className="flex flex-1 justify-between gap-4 text-sm">
+                        <span>
+                          <span className="block font-medium">{method.name}</span>
+                          {method.description && (
+                            <span className="mt-0.5 block text-xs text-ink-soft">{method.description}</span>
+                          )}
+                          {method.minDays !== null && (
+                            <span className="mt-0.5 block text-xs text-ink-soft">
+                              {method.minDays === method.maxDays
+                                ? `${method.minDays} business day${method.minDays === 1 ? '' : 's'}`
+                                : `${method.minDays}–${method.maxDays} business days`}
+                            </span>
+                          )}
+                          {method.isCod && method.codFee > 0 && (
+                            <span className="mt-0.5 block text-xs text-ink-soft">
+                              Includes a {formatPrice(method.codFee)} handling fee
+                            </span>
+                          )}
+                        </span>
+
+                        <span className="shrink-0 text-right">
+                          {method.isFree ? (
+                            <>
+                              <span className="text-sage-700">Free</span>
+                              {method.rate > 0 && (
+                                <span className="ml-2 text-xs text-ink-soft line-through">
+                                  {formatPrice(method.rate)}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            formatPrice(method.cost + (method.isCod ? method.codFee : 0))
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
             <h2 className="label-caps mb-4">Order note</h2>
             <Textarea
               rows={3}
@@ -285,22 +436,32 @@ export function CheckoutClient() {
                 <dt className="text-ink-soft">Subtotal</dt>
                 <dd>{formatPrice(cart.subtotal)}</dd>
               </div>
+              {cart.discount > 0 && (
+                <div className="flex justify-between text-success">
+                  <dt>Discount{cart.coupon ? ` (${cart.coupon.code})` : ''}</dt>
+                  <dd>&minus;{formatPrice(cart.discount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
-                <dt className="text-ink-soft">Shipping</dt>
-                <dd className="text-sage-700">Complimentary</dd>
+                <dt className="text-ink-soft">
+                  Shipping{chosenMethod ? ` — ${chosenMethod.name}` : ''}
+                </dt>
+                <dd className={shippingCost === 0 && chosenMethod ? 'text-sage-700' : undefined}>
+                  {!chosenMethod ? '—' : shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
+                </dd>
               </div>
             </dl>
 
             <div className="flex justify-between border-t border-hairline pt-5">
               <span className="label-caps">Total</span>
-              <span className="text-base">{formatPrice(cart.subtotal)}</span>
+              <span className="text-base">{formatPrice(orderTotal)}</span>
             </div>
 
             <Button
               type="button"
               onClick={() => void placeOrder()}
               loading={placing}
-              disabled={!selectedId || !cart.checkoutReady}
+              disabled={!selectedId || !cart.checkoutReady || (methods.length > 0 && !methodId)}
               className="mt-6 w-full"
             >
               {placing ? 'Placing order' : 'Place order'}
@@ -308,6 +469,9 @@ export function CheckoutClient() {
 
             {!selectedId && (
               <p className="mt-3 text-center text-xs text-ink-soft">Choose a delivery address first.</p>
+            )}
+            {selectedId && methods.length > 0 && !methodId && (
+              <p className="mt-3 text-center text-xs text-ink-soft">Choose a delivery option.</p>
             )}
 
             <p className="mt-4 text-xs leading-relaxed text-ink-soft">

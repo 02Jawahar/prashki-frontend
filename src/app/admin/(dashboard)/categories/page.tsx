@@ -4,7 +4,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { adminService } from '@/services/admin.service'
 import { MediaPicker } from '@/components/admin/media-picker'
-import { Alert, Button, EmptyState, Field, Input, Select, SkeletonRows, StatusBadge, Textarea } from '@/components/ui'
+import {
+  Alert,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  Input,
+  Select,
+  SkeletonRows,
+  StatusBadge,
+  Textarea,
+} from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { AdminCategory } from '@/types/api'
 
@@ -14,6 +25,8 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<AdminCategory | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<AdminCategory | null>(null)
+  const [removing, setRemoving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -31,12 +44,18 @@ export default function AdminCategoriesPage() {
     void load()
   }, [load])
 
-  async function remove(id: string) {
+  async function remove() {
+    if (!deleting) return
+
+    setRemoving(true)
     try {
-      await adminService.deleteCategory(id)
+      await adminService.deleteCategory(deleting.id)
+      setDeleting(null)
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete the category')
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -116,7 +135,7 @@ export default function AdminCategoriesPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => void remove(c.id)}
+                          onClick={() => setDeleting(c)}
                           className="ml-3 text-xs text-ink-soft hover:text-danger"
                         >
                           Delete
@@ -130,6 +149,16 @@ export default function AdminCategoriesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title={`Delete ${deleting?.name}?`}
+        body="Products in this category are not deleted — they simply lose their category. This cannot be undone."
+        confirmLabel="Delete"
+        loading={removing}
+        onConfirm={() => void remove()}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   )
 }

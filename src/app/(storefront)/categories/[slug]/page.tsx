@@ -42,9 +42,10 @@ export default async function CategoryPage({
   // The category comes from the route, not from the filter bar.
   const query = toProductQuery(sp, { category: slug })
 
-  const [listing, categories] = await Promise.all([
+  const [listing, categories, facets] = await Promise.all([
     productService.list(query),
     productService.categories().then((r) => r.data.categories).catch(() => []),
+    productService.facets(query).then((r) => r.data).catch(() => undefined),
   ])
 
   const products = listing.data.products
@@ -68,6 +69,7 @@ export default async function CategoryPage({
 
       <ProductFilters
         categories={categories}
+        facets={facets}
         total={pagination?.total ?? products.length}
         showCategory={false}
       />

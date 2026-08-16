@@ -2,7 +2,8 @@
 
 import { cn } from '@/lib/utils'
 import { Loader2, AlertCircle, Inbox } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
+import type { ComponentPropsWithRef, ReactNode } from 'react'
 
 /**
  * Shared primitives (spec §53–55). Styling comes from the class layer in
@@ -21,7 +22,7 @@ export function Button({
   children,
   disabled,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+}: ComponentPropsWithRef<'button'> & {
   variant?: ButtonVariant
   size?: 'sm' | 'md'
   loading?: boolean
@@ -107,6 +108,7 @@ export function Select({
 const STATUS_TONE: Record<string, string> = {
   ACTIVE: 'badge-success',
   DRAFT: 'badge-warning',
+  SCHEDULED: 'badge-info',
   ARCHIVED: 'badge-neutral',
   INACTIVE: 'badge-neutral',
   SUSPENDED: 'badge-danger',
@@ -116,6 +118,34 @@ const STATUS_TONE: Record<string, string> = {
   SHIPPED: 'badge-info',
   DELIVERED: 'badge-success',
   CANCELLED: 'badge-danger',
+
+  // shipments
+  PENDING: 'badge-warning',
+  READY_TO_SHIP: 'badge-info',
+  IN_TRANSIT: 'badge-info',
+  OUT_FOR_DELIVERY: 'badge-info',
+  FAILED: 'badge-danger',
+  RETURNED_TO_ORIGIN: 'badge-danger',
+
+  // returns and refunds
+  REQUESTED: 'badge-warning',
+  APPROVED: 'badge-info',
+  REJECTED: 'badge-danger',
+  RECEIVED: 'badge-info',
+  INSPECTED: 'badge-info',
+  COMPLETED: 'badge-success',
+
+  // coupons, pages, reviews
+  PAUSED: 'badge-warning',
+  EXPIRED: 'badge-neutral',
+  PUBLISHED: 'badge-success',
+  FLAGGED: 'badge-danger',
+
+  // messages
+  QUEUED: 'badge-warning',
+  SENT: 'badge-info',
+  READ: 'badge-success',
+  BOUNCED: 'badge-danger',
 }
 
 export function StatusBadge({ status }: { status: string }) {
@@ -176,6 +206,86 @@ export function Spinner({ label = 'Loading' }: { label?: string }) {
     <div className="flex items-center justify-center gap-2 py-12 text-sm text-ink-soft">
       <Loader2 className="size-4 animate-spin" aria-hidden />
       {label}&hellip;
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ dialog
+
+/**
+ * Confirmation before a destructive or irreversible action (FR-26.3).
+ *
+ * Deliberately a real dialog rather than `window.confirm`: a native confirm
+ * cannot say *what* is about to be deleted, and on an admin screen "are you
+ * sure?" without the order number is not a question anyone can answer.
+ *
+ * Focus moves to the cancel button on open, so the safe choice is the one a
+ * keyboard user lands on and Enter picks.
+ */
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  tone = 'danger',
+  loading = false,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean
+  title: string
+  body?: ReactNode
+  confirmLabel?: string
+  cancelLabel?: string
+  tone?: 'danger' | 'primary'
+  loading?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    cancelRef.current?.focus()
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onCancel])
+
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onCancel()
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        className="w-full max-w-md border border-rule bg-paper p-6 shadow-lg"
+      >
+        <h2 id="confirm-title" className="display text-xl">
+          {title}
+        </h2>
+        {body && <div className="mt-2 text-sm text-ink-soft">{body}</div>}
+
+        <div className="mt-6 flex justify-end gap-2">
+          <Button ref={cancelRef} variant="ghost" onClick={onCancel} disabled={loading}>
+            {cancelLabel}
+          </Button>
+          <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

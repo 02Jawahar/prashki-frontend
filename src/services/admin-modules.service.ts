@@ -1,0 +1,617 @@
+import { apiClient } from './api-client'
+import type { Pagination } from '@/types/api'
+
+/**
+ * Admin services for the modules added after the boilerplate.
+ *
+ * Kept apart from `admin.service.ts` so the original file stays readable; both
+ * speak to the same `/admin` subtree, and every endpoint behind them re-checks
+ * the caller's permission server-side.
+ */
+
+function qs(query: Record<string, unknown>): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === '') continue
+    params.set(key, String(value))
+  }
+  const s = params.toString()
+  return s ? `?${s}` : ''
+}
+
+// --------------------------------------------------------------- coupons
+
+export type DiscountType = 'PERCENTAGE' | 'FIXED' | 'FREE_SHIPPING'
+export type CouponStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'EXPIRED'
+
+export interface Coupon {
+  id: string
+  code: string
+  description: string | null
+  type: DiscountType
+  status: CouponStatus
+  /** Basis points for PERCENTAGE (1000 = 10%), paise for FIXED. */
+  value: number
+  maxDiscount: number | null
+  minSubtotal: number
+  startsAt: string | null
+  endsAt: string | null
+  usageLimit: number | null
+  usageCount: number
+  perUserLimit: number | null
+  firstOrderOnly: boolean
+  excludeDiscounted: boolean
+  isPublic: boolean
+  redemptionCount: number
+  percentLabel: string | null
+  products: Array<{ id: string; name: string; slug: string }>
+  categories: Array<{ id: string; name: string; slug: string }>
+  createdAt: string
+}
+
+export interface CouponInput {
+  code: string
+  description?: string | null
+  type: DiscountType
+  status: CouponStatus
+  value: number
+  maxDiscount?: number | null
+  minSubtotal: number
+  startsAt?: string | null
+  endsAt?: string | null
+  usageLimit?: number | null
+  perUserLimit?: number | null
+  firstOrderOnly: boolean
+  excludeDiscounted: boolean
+  isPublic: boolean
+  productIds: string[]
+  categoryIds: string[]
+}
+
+export const couponService = {
+  list: (query: { q?: string; status?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ coupons: Coupon[] }>(`/admin/coupons${qs(query)}`)
+      .then((r) => ({ coupons: r.data.coupons, pagination: r.pagination as Pagination })),
+
+  byId: (id: string) =>
+    apiClient.get<{ coupon: Coupon }>(`/admin/coupons/${id}`).then((r) => r.data.coupon),
+
+  create: (input: CouponInput) =>
+    apiClient.post<{ coupon: Coupon }>('/admin/coupons', input).then((r) => r.data.coupon),
+
+  update: (id: string, input: CouponInput) =>
+    apiClient.patch<{ coupon: Coupon }>(`/admin/coupons/${id}`, input).then((r) => r.data.coupon),
+
+  /** A redeemed coupon is expired rather than deleted; the response says which. */
+  remove: (id: string) =>
+    apiClient
+      .delete<{ deleted: boolean; expired: boolean; message?: string }>(`/admin/coupons/${id}`)
+      .then((r) => r.data),
+}
+
+// -------------------------------------------------------------- shipping
+
+export interface ShippingMethod {
+  id: string
+  zoneId: string
+  name: string
+  description: string | null
+  rate: number
+  freeAbove: number | null
+  minSubtotal: number | null
+  maxSubtotal: number | null
+  minDays: number | null
+  maxDays: number | null
+  isCod: boolean
+  codFee: number
+  isActive: boolean
+  position: number
+}
+
+export interface ShippingZone {
+  id: string
+  name: string
+  countries: string[]
+  regions: string[]
+  isDefault: boolean
+  isActive: boolean
+  position: number
+  methods: ShippingMethod[]
+}
+
+export const shippingAdminService = {
+  zones: () =>
+    apiClient.get<{ zones: ShippingZone[] }>('/admin/shipping/zones').then((r) => r.data.zones),
+
+  createZone: (input: Partial<ShippingZone>) =>
+    apiClient.post<{ zone: ShippingZone }>('/admin/shipping/zones', input).then((r) => r.data.zone),
+
+  updateZone: (id: string, input: Partial<ShippingZone>) =>
+    apiClient
+      .patch<{ zone: ShippingZone }>(`/admin/shipping/zones/${id}`, input)
+      .then((r) => r.data.zone),
+
+  deleteZone: (id: string) =>
+    apiClient
+      .delete<{ deleted: boolean; message?: string }>(`/admin/shipping/zones/${id}`)
+      .then((r) => r.data),
+
+  createMethod: (zoneId: string, input: Partial<ShippingMethod>) =>
+    apiClient
+      .post<{ method: ShippingMethod }>(`/admin/shipping/zones/${zoneId}/methods`, input)
+      .then((r) => r.data.method),
+
+  updateMethod: (id: string, input: Partial<ShippingMethod>) =>
+    apiClient
+      .patch<{ method: ShippingMethod }>(`/admin/shipping/methods/${id}`, input)
+      .then((r) => r.data.method),
+
+  deleteMethod: (id: string) =>
+    apiClient
+      .delete<{ deleted: boolean; message?: string }>(`/admin/shipping/methods/${id}`)
+      .then((r) => r.data),
+}
+
+// ------------------------------------------------------------ shipments
+
+export interface AdminShipment {
+  id: string
+  orderId: string
+  shipmentNumber: string
+  status: string
+  carrier: string | null
+  trackingNumber: string | null
+  trackingUrl: string | null
+  weightGrams: number | null
+  shippedAt: string | null
+  deliveredAt: string | null
+  estimatedAt: string | null
+  notes: string | null
+  createdAt: string
+  items: Array<{ id: string; orderItemId: string; quantity: number; orderItem: { productNameSnapshot: string; variantNameSnapshot: string | null } }>
+  events: Array<{ id: string; status: string; message: string | null; location: string | null; occurredAt: string }>
+}
+
+export const shipmentService = {
+  forOrder: (orderId: string) =>
+    apiClient
+      .get<{ shipments: AdminShipment[] }>(`/admin/shipments${qs({ orderId })}`)
+      .then((r) => r.data.shipments),
+
+  create: (
+    orderId: string,
+    input: {
+      items: Array<{ orderItemId: string; quantity: number }>
+      carrier?: string | null
+      trackingNumber?: string | null
+      weightGrams?: number | null
+      estimatedAt?: string | null
+      notes?: string | null
+    },
+  ) =>
+    apiClient
+      .post<{ shipment: AdminShipment; fullyShipped: boolean }>(
+        `/admin/shipments/orders/${orderId}`,
+        input,
+      )
+      .then((r) => r.data),
+
+  updateTracking: (
+    id: string,
+    input: { carrier?: string | null; trackingNumber?: string | null; estimatedAt?: string | null; notes?: string | null },
+  ) =>
+    apiClient
+      .patch<{ shipment: AdminShipment }>(`/admin/shipments/${id}`, input)
+      .then((r) => r.data.shipment),
+
+  setStatus: (id: string, input: { status: string; message?: string; location?: string }) =>
+    apiClient
+      .patch<{ shipment: AdminShipment }>(`/admin/shipments/${id}/status`, input)
+      .then((r) => r.data.shipment),
+}
+
+// -------------------------------------------------------------- returns
+
+export interface AdminReturnSummary {
+  id: string
+  returnNumber: string
+  status: string
+  resolution: string
+  reason: string
+  itemCount: number
+  order: { id: string; orderNumber: string; total: number }
+  customer: { id: string; name: string; email: string | null }
+  requestedAt: string
+}
+
+export interface AdminReturn {
+  id: string
+  returnNumber: string
+  status: string
+  resolution: string
+  reason: string
+  comment: string | null
+  internalNotes: string | null
+  rejectionReason: string | null
+  images: string[]
+  requestedAt: string
+  order: { id: string; orderNumber: string; status: string; total: number; currency: string }
+  user: { id: string; name: string; email: string | null; phone: string | null }
+  items: Array<{
+    id: string
+    quantity: number
+    restock: boolean
+    condition: string | null
+    refundableAmount: number
+    orderItem: {
+      id: string
+      productNameSnapshot: string
+      variantNameSnapshot: string | null
+      imageUrlSnapshot: string | null
+      quantity: number
+    }
+  }>
+  statusHistory: Array<{ id: string; status: string; note: string | null; createdAt: string }>
+  refunds: Array<{ id: string; amount: number; status: string; createdAt: string }>
+}
+
+export const returnAdminService = {
+  list: (query: { q?: string; status?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ requests: AdminReturnSummary[] }>(`/admin/returns${qs(query)}`)
+      .then((r) => ({ requests: r.data.requests, pagination: r.pagination as Pagination })),
+
+  byId: (id: string) =>
+    apiClient
+      .get<{ request: AdminReturn; refundable: { paid: number; refunded: number; refundable: number } }>(
+        `/admin/returns/${id}`,
+      )
+      .then((r) => r.data),
+
+  setStatus: (
+    id: string,
+    input: {
+      status: string
+      note?: string
+      rejectionReason?: string
+      itemDispositions?: Array<{ returnItemId: string; restock: boolean; condition?: string }>
+    },
+  ) =>
+    apiClient
+      .patch<{ request: AdminReturn }>(`/admin/returns/${id}/status`, input)
+      .then((r) => r.data.request),
+
+  setInternalNotes: (id: string, internalNotes: string) =>
+    apiClient
+      .patch<{ request: AdminReturn }>(`/admin/returns/${id}/internal-notes`, { internalNotes })
+      .then((r) => r.data.request),
+}
+
+export const refundService = {
+  forOrder: (orderId: string) =>
+    apiClient
+      .get<{
+        paid: number
+        refunded: number
+        refundable: number
+        refunds: Array<{ id: string; amount: number; status: string; reason: string | null; createdAt: string }>
+      }>(`/admin/refunds/orders/${orderId}`)
+      .then((r) => r.data),
+
+  create: (input: { orderId: string; amount: number; reason?: string; returnRequestId?: string }) =>
+    apiClient
+      .post<{ refund: { id: string; amount: number; status: string }; refundable: number }>(
+        '/admin/refunds',
+        input,
+      )
+      .then((r) => r.data),
+}
+
+// ----------------------------------------------------------------- pages
+
+export interface AdminPageSummary {
+  id: string
+  slug: string
+  title: string
+  status: string
+  isSystem: boolean
+  publishedAt: string | null
+  scheduledFor: string | null
+  updatedAt: string
+  _count: { revisions: number }
+}
+
+export interface AdminPage {
+  id: string
+  slug: string
+  title: string
+  status: string
+  blocks: Array<{ type: string; data: Record<string, unknown> }>
+  seoTitle: string | null
+  seoDescription: string | null
+  seoNoindex: boolean
+  ogImage: string | null
+  isSystem: boolean
+  publishedAt: string | null
+  scheduledFor: string | null
+  revisions: Array<{ id: string; version: number; title: string; note: string | null; createdAt: string }>
+}
+
+export const pageService = {
+  list: (query: { q?: string; status?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ pages: AdminPageSummary[] }>(`/admin/pages${qs(query)}`)
+      .then((r) => ({ pages: r.data.pages, pagination: r.pagination as Pagination })),
+
+  byId: (id: string) =>
+    apiClient.get<{ page: AdminPage }>(`/admin/pages/${id}`).then((r) => r.data.page),
+
+  create: (input: Partial<AdminPage> & { revisionNote?: string }) =>
+    apiClient.post<{ page: AdminPage }>('/admin/pages', input).then((r) => r.data.page),
+
+  update: (id: string, input: Partial<AdminPage> & { revisionNote?: string }) =>
+    apiClient.patch<{ page: AdminPage }>(`/admin/pages/${id}`, input).then((r) => r.data.page),
+
+  restore: (id: string, revisionId: string) =>
+    apiClient
+      .post<{ page: AdminPage }>(`/admin/pages/${id}/restore/${revisionId}`)
+      .then((r) => r.data.page),
+
+  remove: (id: string) =>
+    apiClient
+      .delete<{ deleted: boolean; message?: string }>(`/admin/pages/${id}`)
+      .then((r) => r.data),
+}
+
+// ------------------------------------------------------------- redirects
+
+export interface Redirect {
+  id: string
+  fromPath: string
+  toPath: string
+  statusCode: number
+  isActive: boolean
+  hitCount: number
+  lastHitAt: string | null
+  note: string | null
+  createdAt: string
+}
+
+export const redirectService = {
+  list: (query: { q?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ redirects: Redirect[] }>(`/admin/redirects${qs(query)}`)
+      .then((r) => ({ redirects: r.data.redirects, pagination: r.pagination as Pagination })),
+
+  create: (input: Partial<Redirect>) =>
+    apiClient.post<{ redirect: Redirect }>('/admin/redirects', input).then((r) => r.data.redirect),
+
+  update: (id: string, input: Partial<Redirect>) =>
+    apiClient
+      .patch<{ redirect: Redirect }>(`/admin/redirects/${id}`, input)
+      .then((r) => r.data.redirect),
+
+  remove: (id: string) =>
+    apiClient.delete<{ deleted: boolean }>(`/admin/redirects/${id}`).then((r) => r.data),
+}
+
+// --------------------------------------------------------------- reviews
+
+export interface AdminReview {
+  id: string
+  rating: number
+  title: string | null
+  body: string | null
+  images: string[]
+  status: string
+  isVerifiedPurchase: boolean
+  adminResponse: string | null
+  rejectionReason: string | null
+  helpfulCount: number
+  createdAt: string
+  user: { id: string; name: string; email: string | null }
+  product: { id: string; name: string; slug: string }
+}
+
+export const reviewAdminService = {
+  list: (query: { status?: string; productId?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ reviews: AdminReview[]; pendingCount: number }>(`/admin/reviews${qs(query)}`)
+      .then((r) => ({ ...r.data, pagination: r.pagination as Pagination })),
+
+  setStatus: (id: string, input: { status: string; rejectionReason?: string }) =>
+    apiClient
+      .patch<{ review: AdminReview }>(`/admin/reviews/${id}/status`, input)
+      .then((r) => r.data.review),
+
+  respond: (id: string, adminResponse: string) =>
+    apiClient
+      .patch<{ review: AdminReview }>(`/admin/reviews/${id}/response`, { adminResponse })
+      .then((r) => r.data.review),
+
+  remove: (id: string) =>
+    apiClient.delete<{ deleted: boolean }>(`/admin/reviews/${id}`).then((r) => r.data),
+}
+
+// ------------------------------------------------------------ attributes
+
+export interface AttributeValue {
+  id: string
+  value: string
+  slug: string
+  colorHex: string | null
+  position: number
+  usageCount: number
+}
+
+export interface Attribute {
+  id: string
+  name: string
+  slug: string
+  isSwatch: boolean
+  isFilterable: boolean
+  position: number
+  values: AttributeValue[]
+}
+
+export const attributeService = {
+  list: () =>
+    apiClient.get<{ attributes: Attribute[] }>('/admin/attributes').then((r) => r.data.attributes),
+
+  create: (input: { name: string; isSwatch: boolean; isFilterable: boolean; position?: number }) =>
+    apiClient.post<{ attribute: Attribute }>('/admin/attributes', input).then((r) => r.data.attribute),
+
+  update: (id: string, input: Partial<{ name: string; isSwatch: boolean; isFilterable: boolean; position: number }>) =>
+    apiClient
+      .patch<{ attribute: Attribute }>(`/admin/attributes/${id}`, input)
+      .then((r) => r.data.attribute),
+
+  remove: (id: string) =>
+    apiClient.delete<{ deleted: boolean }>(`/admin/attributes/${id}`).then((r) => r.data),
+
+  addValue: (attributeId: string, input: { value: string; colorHex?: string | null; position?: number }) =>
+    apiClient
+      .post<{ value: AttributeValue }>(`/admin/attributes/${attributeId}/values`, input)
+      .then((r) => r.data.value),
+
+  updateValue: (valueId: string, input: Partial<{ value: string; colorHex: string | null; position: number }>) =>
+    apiClient
+      .patch<{ value: AttributeValue }>(`/admin/attributes/values/${valueId}`, input)
+      .then((r) => r.data.value),
+
+  removeValue: (valueId: string) =>
+    apiClient.delete<{ deleted: boolean }>(`/admin/attributes/values/${valueId}`).then((r) => r.data),
+
+  setVariantOptions: (variantId: string, attributeValueIds: string[]) =>
+    apiClient
+      .put<{ variantId: string }>(`/admin/attributes/variants/${variantId}`, { attributeValueIds })
+      .then((r) => r.data),
+}
+
+// -------------------------------------------------------------- messaging
+
+export interface MessageTemplate {
+  id: string
+  key: string
+  channel: string
+  name: string
+  subject: string | null
+  body: string
+  providerTemplateId: string | null
+  variables: string[]
+  isActive: boolean
+}
+
+export interface MessageLog {
+  id: string
+  channel: string
+  recipient: string
+  subject: string | null
+  status: string
+  entityType: string | null
+  entityId: string | null
+  error: string | null
+  attempts: number
+  sentAt: string | null
+  createdAt: string
+  template: { key: string; name: string } | null
+}
+
+export const messagingService = {
+  templates: () =>
+    apiClient
+      .get<{ templates: MessageTemplate[] }>('/admin/messaging/templates')
+      .then((r) => r.data.templates),
+
+  saveTemplate: (input: Omit<MessageTemplate, 'id'>) =>
+    apiClient
+      .put<{ template: MessageTemplate }>('/admin/messaging/templates', input)
+      .then((r) => r.data.template),
+
+  logs: (query: { channel?: string; status?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ logs: MessageLog[] }>(`/admin/messaging/logs${qs(query)}`)
+      .then((r) => ({ logs: r.data.logs, pagination: r.pagination as Pagination })),
+}
+
+// --------------------------------------------------------------- reports
+
+export interface SalesReport {
+  range: { from: string; to: string; interval: string }
+  orders: number
+  grossRevenue: number
+  refunds: number
+  netRevenue: number
+  averageOrderValue: number
+  breakdown: { subtotal: number; discount: number; shipping: number; tax: number }
+  series: Array<{ date: string; orders: number; revenue: number }>
+}
+
+export const reportService = {
+  sales: (query: { from?: string; to?: string; interval?: string } = {}) =>
+    apiClient.get<SalesReport>(`/admin/reports/sales${qs(query)}`).then((r) => r.data),
+
+  topProducts: (query: { from?: string; to?: string; limit?: number } = {}) =>
+    apiClient
+      .get<{ products: Array<{ productId: string | null; name: string; unitsSold: number; revenue: number }> }>(
+        `/admin/reports/top-products${qs(query)}`,
+      )
+      .then((r) => r.data.products),
+
+  inventory: () =>
+    apiClient
+      .get<{
+        variantsTracked: number
+        unitsInStock: number
+        lowStockCount: number
+        outOfStockCount: number
+        fastestMoving: Array<{ variantId: string; sku: string; productName: string; unitsSold: number; remaining: number }>
+      }>('/admin/reports/inventory')
+      .then((r) => r.data),
+
+  customers: (query: { from?: string; to?: string } = {}) =>
+    apiClient
+      .get<{
+        newCustomers: number
+        totalCustomers: number
+        customersWhoBought: number
+        repeatCustomers: number
+        repeatRate: number
+      }>(`/admin/reports/customers${qs(query)}`)
+      .then((r) => r.data),
+
+  searches: (query: { from?: string; to?: string; limit?: number } = {}) =>
+    apiClient
+      .get<{ searches: Array<{ term: string; searches: number; zeroResults: number }> }>(
+        `/admin/reports/searches${qs(query)}`,
+      )
+      .then((r) => r.data.searches),
+}
+
+// --------------------------------------------------------- customer notes
+
+export interface CustomerNote {
+  id: string
+  body: string
+  isPinned: boolean
+  createdAt: string
+  author: { id: string; name: string } | null
+}
+
+export const customerNoteService = {
+  create: (customerId: string, input: { body: string; isPinned?: boolean }) =>
+    apiClient
+      .post<{ note: CustomerNote }>(`/admin/customers/${customerId}/notes`, input)
+      .then((r) => r.data.note),
+
+  update: (customerId: string, noteId: string, input: { body?: string; isPinned?: boolean }) =>
+    apiClient
+      .patch<{ note: CustomerNote }>(`/admin/customers/${customerId}/notes/${noteId}`, input)
+      .then((r) => r.data.note),
+
+  remove: (customerId: string, noteId: string) =>
+    apiClient
+      .delete<{ deleted: boolean }>(`/admin/customers/${customerId}/notes/${noteId}`)
+      .then((r) => r.data),
+}

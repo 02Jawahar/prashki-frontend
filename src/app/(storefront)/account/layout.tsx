@@ -15,13 +15,18 @@ export default async function AccountLayout({ children }: { children: React.Reac
         <div className="rule-dot mt-4" aria-hidden />
       </header>
 
-      <nav className="mb-10 flex justify-center gap-6 border-b border-hairline pb-4">
-        <Link href="/account" className="label-caps text-ink hover:text-sage-700">
-          Overview
-        </Link>
-        <Link href="/account/orders" className="label-caps text-ink hover:text-sage-700">
-          Orders
-        </Link>
+      <nav className="mb-10 flex flex-wrap justify-center gap-x-6 gap-y-3 border-b border-hairline pb-4">
+        {[
+          ['/account', 'Overview'],
+          ['/account/orders', 'Orders'],
+          ['/account/returns', 'Returns'],
+          ['/account/wishlist', 'Wishlist'],
+          ['/account/settings', 'Settings'],
+        ].map(([href, label]) => (
+          <Link key={href} href={href} className="label-caps text-ink hover:text-sage-700">
+            {label}
+          </Link>
+        ))}
       </nav>
 
       {children}

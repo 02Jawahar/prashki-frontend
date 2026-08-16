@@ -33,7 +33,7 @@ export interface AuthUser {
 
 // --------------------------------------------------------------- catalogue
 
-export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+export type ProductStatus = 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
 export type VariantStatus = 'ACTIVE' | 'INACTIVE'
 
 export interface CategoryRef {
@@ -54,6 +54,8 @@ export interface ProductListItem {
   discountPercent: number
   status: ProductStatus
   featured: boolean
+  ratingAverage: number
+  ratingCount: number
   category: CategoryRef | null
   image: string | null
   hoverImage: string | null
@@ -94,6 +96,11 @@ export interface ProductDetail {
   discountPercent: number
   status: ProductStatus
   featured: boolean
+  material: string | null
+  careInstructions: string | null
+  ratingAverage: number
+  ratingCount: number
+  seo: { title: string; description: string | null; noindex: boolean }
   category: CategoryRef | null
   images: ProductImage[]
   variants: ProductVariant[]

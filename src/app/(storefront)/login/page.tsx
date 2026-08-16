@@ -28,6 +28,12 @@ export default async function LoginPage({
       <div className="mx-auto mt-10 max-w-sm">
         <AuthForm mode="login" redirectTo={target} />
 
+        <p className="mt-4 text-center text-sm text-ink-soft">
+          <Link href="/forgot-password" className="link-underline text-ink">
+            Forgot your password?
+          </Link>
+        </p>
+
         <p className="mt-6 text-center text-sm text-ink-soft">
           New here?{' '}
           <Link

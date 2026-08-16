@@ -27,6 +27,7 @@ export type OrderStatus =
 
 export interface OrderItem {
   id: string
+  productId: string | null
   productNameSnapshot: string
   variantNameSnapshot: string | null
   sku: string
@@ -34,6 +35,8 @@ export interface OrderItem {
   unitPrice: number
   quantity: number
   lineTotal: number
+  /** This line's share of the order discount, in paise. */
+  discountAllocated: number
 }
 
 export interface OrderSummary {
@@ -68,6 +71,13 @@ export interface Order {
   total: number
   currency: string
   notes: string | null
+  /**
+   * Staff-only. Present on admin reads and absent on customer reads, because
+   * the API strips it rather than relying on the client not to render it.
+   */
+  internalNotes?: string | null
+  couponCode: string | null
+  shippingMethodName: string | null
   shippingAddressSnapshot: AddressSnapshot
   createdAt: string
   items: OrderItem[]
@@ -86,8 +96,17 @@ export const addressService = {
 }
 
 export const orderService = {
-  create: (input: { addressId: string; notes?: string }) =>
-    apiClient.post<{ order: Order }>('/orders', input).then((r) => r.data.order),
+  /**
+   * `idempotencyKey` is what makes a double-clicked "Place order", or a retry
+   * after a dropped connection, resolve to one order instead of two. The client
+   * mints it once per checkout attempt and reuses it for every retry.
+   */
+  create: (input: {
+    addressId: string
+    notes?: string
+    shippingMethodId?: string
+    idempotencyKey?: string
+  }) => apiClient.post<{ order: Order; replayed: boolean }>('/orders', input).then((r) => r.data),
 
   list: (page = 1) =>
     apiClient

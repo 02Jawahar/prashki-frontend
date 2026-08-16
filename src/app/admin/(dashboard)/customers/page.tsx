@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { adminService } from '@/services/admin.service'
@@ -103,7 +104,11 @@ export default function AdminCustomersPage() {
               <tbody>
                 {customers.map((c) => (
                   <tr key={c.id}>
-                    <td>{c.name}</td>
+                    <td>
+                      <Link href={`/admin/customers/${c.id}`} className="link-underline">
+                        {c.name}
+                      </Link>
+                    </td>
                     <td className="text-xs text-ink-soft">{c.email}</td>
                     <td className="text-xs text-ink-soft">{c.phone ?? '—'}</td>
                     <td className="tabular-nums">{c.orderCount}</td>

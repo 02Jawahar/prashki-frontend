@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Menu, Search, ShoppingBag, User, X, ChevronDown } from 'lucide-react'
 import { SearchOverlay } from './search-overlay'
 import { MobileMenu } from './mobile-menu'
+import { NotificationBell } from './notification-bell'
 import { useAuth } from '@/hooks/use-auth'
 import { useCart } from '@/hooks/use-cart'
 import type { NavItem } from '@/types/api'
@@ -91,6 +92,8 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search">
                 <Search className="size-5" strokeWidth={1.4} />
               </button>
+
+              <NotificationBell />
 
               <Link
                 href={user ? '/account' : '/login'}

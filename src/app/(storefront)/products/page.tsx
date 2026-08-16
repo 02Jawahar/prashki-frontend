@@ -19,9 +19,12 @@ export default async function ProductsPage({
   const sp = await searchParams
   const query = toProductQuery(sp)
 
-  const [listing, categories] = await Promise.all([
+  const [listing, categories, facets] = await Promise.all([
     productService.list(query),
     productService.categories().then((r) => r.data.categories).catch(() => []),
+    // Filters are useful but not load-bearing: if the facet query fails the
+    // grid still renders.
+    productService.facets(query).then((r) => r.data).catch(() => undefined),
   ])
 
   const products = listing.data.products
@@ -34,7 +37,11 @@ export default async function ProductsPage({
         <div className="rule-dot mt-4" aria-hidden />
       </header>
 
-      <ProductFilters categories={categories} total={pagination?.total ?? products.length} />
+      <ProductFilters
+        categories={categories}
+        facets={facets}
+        total={pagination?.total ?? products.length}
+      />
 
       {products.length === 0 ? (
         <div className="py-16">

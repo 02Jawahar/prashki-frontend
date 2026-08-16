@@ -12,9 +12,33 @@ export interface ProductQuery {
   minPrice?: number
   maxPrice?: number
   inStock?: boolean
-  sort?: 'featured' | 'newest' | 'oldest' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc'
+  /** "size:m,size:l,colour:sage" — see the API's facet handling. */
+  attributes?: string
+  minRating?: number
+  sort?:
+    | 'featured'
+    | 'newest'
+    | 'oldest'
+    | 'price-asc'
+    | 'price-desc'
+    | 'name-asc'
+    | 'name-desc'
+    | 'rating'
   page?: number
   perPage?: number
+}
+
+export interface FacetValue {
+  slug: string
+  value: string
+  colorHex: string | null
+  count: number
+}
+
+export interface Facets {
+  attributes: Array<{ slug: string; name: string; isSwatch: boolean; values: FacetValue[] }>
+  price: { min: number; max: number }
+  categories: Array<{ slug: string; name: string; count: number }>
 }
 
 export function productQueryString(query: ProductQuery): string {
@@ -34,6 +58,15 @@ export const productService = {
 
   bySlug: (slug: string) =>
     serverApiGetOrNull<{ product: ProductDetail; related: ProductListItem[] }>(`/products/${slug}`),
+
+  /**
+   * Filter options for the current result set. Counts ignore the attribute
+   * selections themselves, so ticking one size does not empty the panel.
+   */
+  facets: (query: ProductQuery = {}) => {
+    const { attributes: _selected, ...rest } = query
+    return serverApiGet<Facets>(`/products/facets${productQueryString(rest)}`)
+  },
 
   categories: () => serverApiGet<{ categories: Category[] }>('/categories'),
 

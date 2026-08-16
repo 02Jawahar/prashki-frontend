@@ -9,6 +9,7 @@ import { orderService, type Order } from '@/services/order.service'
 import { formatPrice } from '@/lib/money'
 import { formatDateTime } from '@/lib/utils'
 import { Alert, SkeletonRows, StatusBadge } from '@/components/ui'
+import { OrderTracking } from '@/components/storefront/order-tracking'
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -89,8 +90,16 @@ export default function OrderDetailPage() {
 
         <dl className="space-y-2.5 border-t border-hairline p-5 text-sm">
           <Row label="Subtotal" value={formatPrice(order.subtotal)} />
-          {order.discount > 0 && <Row label="Discount" value={`−${formatPrice(order.discount)}`} />}
-          <Row label="Shipping" value={order.shipping === 0 ? 'Complimentary' : formatPrice(order.shipping)} />
+          {order.discount > 0 && (
+            <Row
+              label={order.couponCode ? `Discount (${order.couponCode})` : 'Discount'}
+              value={`−${formatPrice(order.discount)}`}
+            />
+          )}
+          <Row
+            label={order.shippingMethodName ? `Shipping — ${order.shippingMethodName}` : 'Shipping'}
+            value={order.shipping === 0 ? 'Complimentary' : formatPrice(order.shipping)}
+          />
           {order.tax > 0 && <Row label="Tax" value={formatPrice(order.tax)} />}
           <div className="flex justify-between border-t border-hairline pt-3 text-base">
             <dt className="label-caps">Total</dt>
@@ -98,6 +107,19 @@ export default function OrderDetailPage() {
           </div>
         </dl>
       </section>
+
+      <OrderTracking orderId={order.id} />
+
+      {order.status === 'DELIVERED' && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-rule p-5">
+          <p className="text-sm text-ink-soft">
+            Something not right? Returns are open for seven days after delivery.
+          </p>
+          <Link href={`/account/orders/${order.id}/return`} className="btn btn-outline btn-sm">
+            Start a return
+          </Link>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <section className="border border-rule p-5">

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { Minus, Plus, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
 import { formatPrice } from '@/lib/money'
-import { Alert, Button, EmptyState, SkeletonRows } from '@/components/ui'
+import { Alert, EmptyState, SkeletonRows } from '@/components/ui'
+import { CouponField } from '@/components/storefront/coupon-field'
 
 export default function CartPage() {
   const { cart, updateItem, removeItem, loading, error } = useCart()
@@ -140,15 +141,25 @@ export default function CartPage() {
                   <dt className="text-ink-soft">Subtotal</dt>
                   <dd>{formatPrice(cart.subtotal)}</dd>
                 </div>
+                {cart.discount > 0 && (
+                  <div className="flex justify-between text-success">
+                    <dt>Discount{cart.coupon ? ` (${cart.coupon.code})` : ''}</dt>
+                    <dd>&minus;{formatPrice(cart.discount)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Shipping</dt>
-                  <dd className="text-ink-soft">Calculated at checkout</dd>
+                  <dd className="text-ink-soft">
+                    {cart.freeShipping ? 'Free' : 'Calculated at checkout'}
+                  </dd>
                 </div>
               </dl>
 
+              <CouponField />
+
               <div className="mt-5 flex justify-between border-t border-hairline pt-5">
                 <span className="label-caps">Total</span>
-                <span className="text-base">{formatPrice(cart.subtotal)}</span>
+                <span className="text-base">{formatPrice(cart.discountedSubtotal)}</span>
               </div>
 
               <Link

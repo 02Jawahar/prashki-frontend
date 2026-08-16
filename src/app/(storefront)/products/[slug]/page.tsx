@@ -5,6 +5,8 @@ import { productService } from '@/services/product.service'
 import { ProductGallery } from '@/components/storefront/product-gallery'
 import { AddToCart } from '@/components/storefront/add-to-cart'
 import { ProductGrid, SectionHeading } from '@/components/storefront/product-card'
+import { ProductReviews } from '@/components/storefront/product-reviews'
+import { WishlistButton } from '@/components/storefront/wishlist-button'
 import { formatPrice } from '@/lib/money'
 
 export async function generateMetadata({
@@ -17,14 +19,20 @@ export async function generateMetadata({
   if (!res) return { title: 'Product not found' }
 
   const { product } = res.data
-  const description = product.shortDescription ?? product.description.slice(0, 155)
+
+  // Per-product SEO overrides win; the API already falls back to the product's
+  // own name and summary when none is set.
+  const title = product.seo?.title ?? product.name
+  const description =
+    product.seo?.description ?? product.shortDescription ?? product.description.slice(0, 155)
 
   return {
-    title: product.name,
+    title,
     description,
     alternates: { canonical: `/products/${slug}` },
+    robots: product.seo?.noindex ? { index: false, follow: true } : undefined,
     openGraph: {
-      title: product.name,
+      title,
       description,
       type: 'website',
       images: product.images[0] ? [product.images[0].url] : undefined,
@@ -100,11 +108,33 @@ export default async function ProductDetailPage({
               <AddToCart product={product} />
             </div>
 
+            <WishlistButton
+              productId={product.id}
+              productName={product.name}
+              className="mt-3 w-full"
+            />
+
             <div className="mt-9 border-t border-hairline pt-7">
               <h2 className="label-caps mb-3">Description</h2>
               <p className="whitespace-pre-line text-[0.88rem] leading-relaxed text-ink-soft">
                 {product.description}
               </p>
+
+              {product.material && (
+                <div className="mt-6">
+                  <h3 className="label-caps mb-2">Material</h3>
+                  <p className="text-[0.88rem] leading-relaxed text-ink-soft">{product.material}</p>
+                </div>
+              )}
+
+              {product.careInstructions && (
+                <div className="mt-6">
+                  <h3 className="label-caps mb-2">Care</h3>
+                  <p className="whitespace-pre-line text-[0.88rem] leading-relaxed text-ink-soft">
+                    {product.careInstructions}
+                  </p>
+                </div>
+              )}
 
               <dl className="mt-6 space-y-2 text-xs text-ink-soft">
                 <div className="flex gap-2">
@@ -129,6 +159,10 @@ export default async function ProductDetailPage({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="container-pk pb-4">
+        <ProductReviews productId={product.id} />
       </div>
 
       {related.length > 0 && (

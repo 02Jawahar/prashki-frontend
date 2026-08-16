@@ -15,6 +15,15 @@ import {
   Settings,
   Menu,
   X,
+  Tag,
+  Truck,
+  PackageOpen,
+  FileText,
+  Star,
+  MessageSquare,
+  BarChart3,
+  SlidersHorizontal,
+  Signpost,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -45,16 +54,42 @@ const NAV: NavGroup[] = [
     entries: [
       { label: 'Products', href: '/admin/products', icon: Package, permission: 'product.read' },
       { label: 'Categories', href: '/admin/categories', icon: FolderTree, permission: 'product.read' },
+      { label: 'Options', href: '/admin/attributes', icon: SlidersHorizontal, permission: 'product.read' },
       { label: 'Inventory', href: '/admin/inventory', icon: Boxes, permission: 'inventory.read' },
     ],
   },
   {
-    label: 'Storefront',
-    entries: [{ label: 'Content', href: '/admin/content', icon: LayoutTemplate, permission: 'settings.read' }],
+    label: 'Selling',
+    entries: [
+      { label: 'Orders', href: '/admin/orders', icon: ShoppingCart, permission: 'order.read' },
+      { label: 'Returns', href: '/admin/returns', icon: PackageOpen, permission: 'return.read' },
+      { label: 'Customers', href: '/admin/customers', icon: Users, permission: 'customer.read' },
+    ],
   },
-  { entries: [{ label: 'Orders', href: '/admin/orders', icon: ShoppingCart, permission: 'order.read' }] },
-  { entries: [{ label: 'Customers', href: '/admin/customers', icon: Users, permission: 'customer.read' }] },
-  { entries: [{ label: 'Settings', href: '/admin/settings', icon: Settings, permission: 'settings.read' }] },
+  {
+    label: 'Marketing',
+    entries: [
+      { label: 'Coupons', href: '/admin/coupons', icon: Tag, permission: 'coupon.read' },
+      { label: 'Reviews', href: '/admin/reviews', icon: Star, permission: 'review.moderate' },
+      { label: 'Messages', href: '/admin/messaging', icon: MessageSquare, permission: 'message.manage' },
+    ],
+  },
+  {
+    label: 'Storefront',
+    entries: [
+      { label: 'Content', href: '/admin/content', icon: LayoutTemplate, permission: 'settings.read' },
+      { label: 'Pages', href: '/admin/pages', icon: FileText, permission: 'content.read' },
+      { label: 'Redirects', href: '/admin/redirects', icon: Signpost, permission: 'content.read' },
+    ],
+  },
+  { entries: [{ label: 'Reports', href: '/admin/reports', icon: BarChart3, permission: 'report.read' }] },
+  {
+    label: 'Configuration',
+    entries: [
+      { label: 'Shipping', href: '/admin/shipping', icon: Truck, permission: 'settings.read' },
+      { label: 'Settings', href: '/admin/settings', icon: Settings, permission: 'settings.read' },
+    ],
+  },
 ]
 
 export function AdminSidebar() {
