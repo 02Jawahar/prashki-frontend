@@ -45,8 +45,23 @@ ENV PORT=3000
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.ts ./next.config.ts
-COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
+
+# `.next` is the one copied tree the app writes to at runtime: the image
+# optimiser caches every resized image under .next/cache/images. COPY lands
+# files owned by root, so without this the container runs as `node` and cannot
+# create that directory — which surfaces as
+#
+#   EACCES: permission denied, mkdir '/app/.next/cache/images'
+#
+# on the first product photo, as an *unhandled rejection*, so it destabilises
+# the process rather than just skipping the cache.
+COPY --from=build --chown=node:node /app/.next ./.next
+
+# Create the cache directory up front so the first request is not also the
+# first mkdir, and so a read-only .next would fail at build rather than under
+# traffic.
+RUN mkdir -p /app/.next/cache/images && chown -R node:node /app/.next
 
 USER node
 EXPOSE 3000
