@@ -152,6 +152,47 @@ export const apiClient = {
  * Server-side fetch. `cookieHeader` must be passed explicitly by the caller
  * (from next/headers) so this module stays importable from anywhere.
  */
+/**
+ * Whether the misconfiguration warning has already been printed.
+ *
+ * Once per process, not once per request: a homepage render makes several
+ * calls, and a wall of identical lines buries the one fact that matters.
+ */
+let warnedAboutServerBase = false
+
+/**
+ * Says, once, which API the server is calling and why that failed.
+ *
+ * Every server-side caller catches its own errors so a customer never sees a
+ * stack trace — which also means a wrong `API_URL` produces a site that is
+ * silently empty and gives the operator nothing to go on. This is the one
+ * place that knows both the URL and the failure, so it is the only place that
+ * can say so.
+ *
+ * The path is included but never the cookie header.
+ */
+function warnServerBase(path: string, reason: string): void {
+  if (warnedAboutServerBase) return
+  warnedAboutServerBase = true
+
+  console.error(
+    [
+      '',
+      '  The frontend cannot reach the API.',
+      '',
+      `    tried:  ${SERVER_BASE}${path}`,
+      `    reason: ${reason}`,
+      `    API_URL is ${process.env.API_URL ? `set to "${process.env.API_URL}"` : 'NOT SET (falling back to NEXT_PUBLIC_API_URL)'}`,
+      '',
+      '  Server-side rendering uses API_URL, not NEXT_PUBLIC_API_URL. It should',
+      '  point at the backend, e.g. http://<backend-service>:4000/api/v1 on the',
+      '  internal network. Until this resolves, pages render empty and admin',
+      '  sign-in bounces back to the login form.',
+      '',
+    ].join('\n'),
+  )
+}
+
 export async function serverApiGet<T>(
   path: string,
   opts: { cookieHeader?: string; revalidate?: number | false; tags?: string[] } = {},
@@ -159,13 +200,29 @@ export async function serverApiGet<T>(
   const headers: Record<string, string> = { accept: 'application/json' }
   if (opts.cookieHeader) headers.cookie = opts.cookieHeader
 
-  const res = await fetch(`${SERVER_BASE}${path}`, {
-    headers,
-    // Catalogue edits should show up immediately (spec §39). Swap to a
-    // revalidate window plus tag invalidation when caching is turned on.
-    cache: opts.revalidate === undefined ? 'no-store' : undefined,
-    next: opts.revalidate === undefined ? undefined : { revalidate: opts.revalidate, tags: opts.tags },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${SERVER_BASE}${path}`, {
+      headers,
+      // Catalogue edits should show up immediately (spec §39). Swap to a
+      // revalidate window plus tag invalidation when caching is turned on.
+      cache: opts.revalidate === undefined ? 'no-store' : undefined,
+      next: opts.revalidate === undefined ? undefined : { revalidate: opts.revalidate, tags: opts.tags },
+    })
+  } catch (err) {
+    // Unreachable host: DNS failure, connection refused, TLS rejection.
+    warnServerBase(path, err instanceof Error ? err.message : String(err))
+    throw err
+  }
+
+  // Reachable but answering wrongly — the usual sign of API_URL pointing at
+  // the storefront, which serves HTML 404s where JSON was expected.
+  if (res.status === 404 || res.status >= 500) {
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      warnServerBase(path, `HTTP ${res.status} with content-type "${contentType || 'none'}"`)
+    }
+  }
 
   return parse<T>(res)
 }
