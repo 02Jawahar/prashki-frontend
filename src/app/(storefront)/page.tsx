@@ -25,7 +25,23 @@ export default async function HomePage() {
     settings = {}
   }
 
-  const sections = settings['home.sections'] ?? []
+  /**
+   * A freshly bootstrapped store has no sections configured, and rendering
+   * nothing between the header and the footer makes a working deploy look
+   * broken — which is exactly how it was reported.
+   *
+   * So an unconfigured homepage falls back to the catalogue. It is not a
+   * substitute for a designed homepage; it is the difference between "this
+   * shop has not been set up yet" and "this shop is broken".
+   */
+  const configured = settings['home.sections'] ?? []
+  const sections: HomeSection[] =
+    configured.length > 0
+      ? configured
+      : [
+          { type: 'new-arrivals', heading: 'New arrivals', limit: 8 },
+          { type: 'category-banner', heading: 'Shop by category', slugs: [] },
+        ]
 
   // Only fetch the showcase when a section actually asks for it — an empty
   // wall is one request the homepage does not need to make.
@@ -40,6 +56,27 @@ export default async function HomePage() {
       ? productService.showcase(8).then((r) => r.data.items).catch(() => [])
       : Promise.resolve([]),
   ])
+
+  /**
+   * With no sections, no products and no categories there is genuinely nothing
+   * to render — a brand-new store before anyone has added stock. Saying so
+   * beats a blank page between the header and the footer, which reads as a
+   * failure rather than as a store that is not open yet.
+   */
+  const nothingToShow =
+    configured.length === 0 && newest.length === 0 && featured.length === 0 && categories.length === 0
+
+  if (nothingToShow) {
+    return (
+      <section className="container-pk py-24 text-center md:py-32">
+        <p className="eyebrow mb-4 text-sage-700">Coming soon</p>
+        <h1 className="display text-[2.4rem] md:text-[3.2rem]">The collection is on its way</h1>
+        <p className="mx-auto mt-5 max-w-md text-[0.95rem] text-ink-soft">
+          We are putting the finishing touches to the studio. Do check back shortly.
+        </p>
+      </section>
+    )
+  }
 
   return (
     <>
@@ -187,9 +224,14 @@ function CategoryStrip({
   slugs: string[]
   categories: Category[]
 }) {
-  const shown = slugs
-    .map((slug) => categories.find((c) => c.slug === slug))
-    .filter((c): c is Category => Boolean(c))
+  // No explicit selection means "all of them" — that is what an admin who
+  // left the field blank meant, and it is what the unconfigured fallback needs.
+  const shown =
+    slugs.length === 0
+      ? categories
+      : slugs
+          .map((slug) => categories.find((c) => c.slug === slug))
+          .filter((c): c is Category => Boolean(c))
 
   if (shown.length === 0) return null
 
