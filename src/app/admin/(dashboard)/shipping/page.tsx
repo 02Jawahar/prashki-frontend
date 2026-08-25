@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   shippingAdminService,
@@ -100,7 +100,7 @@ export default function AdminShippingPage() {
           </p>
           {provider && (
             <p className="mt-1 text-xs text-ink-soft">
-              Carrier: <span className="text-ink">{provider.name}</span> —{' '}
+              Default carrier: <span className="text-ink">{provider.name}</span> —{' '}
               {provider.canCreateShipments
                 ? 'parcels are booked automatically'
                 : 'parcels are booked by hand and the tracking number entered here'}
@@ -117,6 +117,8 @@ export default function AdminShippingPage() {
 
       {error && <Alert>{error}</Alert>}
       {notice && <Alert tone="info">{notice}</Alert>}
+
+      {carriers.length > 0 && <Carriers carriers={carriers} />}
 
       {editingZone && (
         <ZoneForm
@@ -748,6 +750,86 @@ function MethodForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+/**
+ * Which carriers this build can actually talk to (FR-21.3).
+ *
+ * The registry lives in the API — which adapters are compiled in is a property
+ * of the deployment, not of the browser — so this is the only honest place to
+ * see it. Without it the answer to "is a courier wired up?" was a single line
+ * naming the environment default, which says nothing about the carrier a
+ * particular method books with.
+ *
+ * `manual` always appears. It is not a placeholder for a missing integration:
+ * booking parcels by hand and entering the AWB is a supported way to run a
+ * store, and most of them start there.
+ */
+function Carriers({ carriers }: { carriers: CarrierAdapter[] }) {
+  const [open, setOpen] = useState(false)
+  const base = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+  return (
+    <section className="mb-6 border border-rule bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left"
+        aria-expanded={open}
+      >
+        <span>
+          <span className="label-caps text-ink">Carriers</span>
+          <span className="ml-2 text-xs text-ink-soft">
+            {carriers.length} registered ·{' '}
+            {carriers.some((c) => c.canCreateShipments)
+              ? `${carriers.filter((c) => c.canCreateShipments).length} can book automatically`
+              : 'all parcels booked by hand'}
+          </span>
+        </span>
+        <ChevronDown
+          className={`size-4 shrink-0 text-ink-soft transition-transform ${open ? 'rotate-180' : ''}`}
+          strokeWidth={1.6}
+          aria-hidden
+        />
+      </button>
+
+      {open && (
+        <div className="border-t border-rule px-5 py-4">
+          <ul className="space-y-3">
+            {carriers.map((carrier) => (
+              <li key={carrier.name} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-medium">{carrier.name}</span>
+
+                {carrier.isDefault && <span className="badge badge-neutral">default</span>}
+
+                {!carrier.configured && (
+                  <span className="badge badge-warning">credentials missing</span>
+                )}
+
+                <span className="text-xs text-ink-soft">
+                  {carrier.canCreateShipments
+                    ? 'books parcels and returns a tracking number'
+                    : 'booked by hand — you enter the tracking number'}
+                </span>
+
+                {carrier.canCreateShipments && (
+                  <code className="w-full break-all text-xs text-ink-soft">
+                    Callback: {base}/webhooks/shipping/{carrier.name}
+                  </code>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-4 border-t border-rule pt-3 text-xs text-ink-soft">
+            A method&rsquo;s <span className="text-ink">Booked with</span> field chooses from these.
+            Adding a courier is a code change — implement the shipping provider interface and
+            register it — after which it appears here and becomes selectable.
+          </p>
+        </div>
+      )}
+    </section>
   )
 }
 
