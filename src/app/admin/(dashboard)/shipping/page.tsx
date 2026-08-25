@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   shippingAdminService,
+  type CarrierAdapter,
   type ShippingMethod,
   type ShippingRate,
   type ShippingZone,
@@ -18,6 +19,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Select,
   SkeletonRows,
 } from '@/components/ui'
 
@@ -34,6 +36,7 @@ export default function AdminShippingPage() {
 
   const [zones, setZones] = useState<ShippingZone[]>([])
   const [provider, setProvider] = useState<{ name: string; canCreateShipments: boolean } | null>(null)
+  const [carriers, setCarriers] = useState<CarrierAdapter[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -54,6 +57,7 @@ export default function AdminShippingPage() {
       const result = await shippingAdminService.zones()
       setZones(result.zones)
       setProvider(result.provider)
+      setCarriers(result.providers ?? [])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load shipping zones')
@@ -129,6 +133,7 @@ export default function AdminShippingPage() {
         <MethodForm
           zoneId={editingMethod.zoneId}
           method={editingMethod.method}
+          carriers={carriers}
           onDone={async () => {
             setEditingMethod(null)
             await load()
@@ -514,11 +519,13 @@ function ZoneForm({
 function MethodForm({
   zoneId,
   method,
+  carriers,
   onDone,
   onCancel,
 }: {
   zoneId: string
   method?: ShippingMethod
+  carriers: CarrierAdapter[]
   onDone: () => void | Promise<void>
   onCancel: () => void
 }) {
@@ -532,6 +539,7 @@ function MethodForm({
     maxDays: method?.maxDays != null ? String(method.maxDays) : '',
     isCod: method?.isCod ?? false,
     codFee: String((method?.codFee ?? 0) / 100),
+    provider: method?.provider ?? '',
     isActive: method?.isActive ?? true,
     position: String(method?.position ?? 0),
   })
@@ -558,6 +566,8 @@ function MethodForm({
       maxDays: form.maxDays ? Number(form.maxDays) : null,
       isCod: form.isCod,
       codFee: form.isCod ? paise(form.codFee) : 0,
+      // Empty means booked by hand, which the API stores as null.
+      provider: form.provider || null,
       isActive: form.isActive,
       position: Number(form.position || 0),
     }
@@ -663,6 +673,33 @@ function MethodForm({
             value={form.maxDays}
             onChange={(event) => setForm((f) => ({ ...f, maxDays: event.target.value }))}
           />
+        </Field>
+      </div>
+
+      <div className="mt-4">
+        <Field
+          label="Booked with"
+          htmlFor="m-provider"
+          hint="Which carrier creates the parcel and returns a tracking number. By hand means an operator books it with the courier and types the AWB in."
+        >
+          <Select
+            id="m-provider"
+            value={form.provider}
+            onChange={(event) => setForm((f) => ({ ...f, provider: event.target.value }))}
+          >
+            <option value="">By hand</option>
+            {carriers
+              // A carrier that cannot create shipments is indistinguishable
+              // from booking by hand, so offering it would be a choice with no
+              // consequence.
+              .filter((carrier) => carrier.canCreateShipments)
+              .map((carrier) => (
+                <option key={carrier.name} value={carrier.name}>
+                  {carrier.name}
+                  {carrier.configured ? '' : ' — not configured'}
+                </option>
+              ))}
+          </Select>
         </Field>
       </div>
 

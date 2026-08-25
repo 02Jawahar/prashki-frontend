@@ -138,12 +138,23 @@ export interface ShippingZone {
   methods: ShippingMethod[]
 }
 
+/** A carrier adapter this build can talk to. */
+export interface CarrierAdapter {
+  name: string
+  /** False means parcels on this carrier are booked by hand. */
+  canCreateShipments: boolean
+  /** False means it is registered but missing its credentials. */
+  configured: boolean
+  isDefault: boolean
+}
+
 export const shippingAdminService = {
   zones: () =>
     apiClient
       .get<{
         zones: ShippingZone[]
         provider: { name: string; canCreateShipments: boolean }
+        providers: CarrierAdapter[]
       }>('/admin/shipping/zones')
       .then((r) => r.data),
 
@@ -196,6 +207,14 @@ export interface AdminShipment {
   lengthMm: number | null
   widthMm: number | null
   heightMm: number | null
+  /** Paise the courier collects on delivery. Zero for a prepaid parcel. */
+  codAmount: number
+  /**
+   * Whether a carrier could actually book this parcel. False for a method that
+   * books by hand, and false once it is already booked — the server decides,
+   * because which adapters exist is a property of the build.
+   */
+  canBook: boolean
   /** Carrier references. Null when the parcel was booked by hand. */
   provider: string | null
   providerShipmentId: string | null
@@ -284,10 +303,18 @@ export const shipmentService = {
       .patch<{ shipment: AdminShipment }>(`/admin/shipments/${id}`, input)
       .then((r) => r.data.shipment),
 
+  /**
+   * Cancelling here also calls the parcel off with the carrier. That half is
+   * best-effort, so `carrierError` comes back set when the courier could not be
+   * reached and the pickup may still stand.
+   */
   setStatus: (id: string, input: { status: string; message?: string; location?: string }) =>
     apiClient
-      .patch<{ shipment: AdminShipment }>(`/admin/shipments/${id}/status`, input)
-      .then((r) => r.data.shipment),
+      .patch<{ shipment: AdminShipment; carrierError: string | null }>(
+        `/admin/shipments/${id}/status`,
+        input,
+      )
+      .then((r) => r.data),
 }
 
 // -------------------------------------------------------------- returns

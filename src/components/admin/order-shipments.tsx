@@ -5,6 +5,7 @@ import { AlertTriangle, ExternalLink, Plus } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { shipmentService, type AdminShipment } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
+import { formatPrice } from '@/lib/money'
 import { formatDateTime } from '@/lib/utils'
 import {
   Alert,
@@ -125,6 +126,29 @@ export function OrderShipments({
     }
   }
 
+  /**
+   * Books, or retries booking, a parcel with the carrier its method names.
+   *
+   * Separate from creation because the two fail for different reasons: a parcel
+   * is created from goods that are already packed, and a courier API that is
+   * down should not cost us that record. Retrying is then just this button
+   * again.
+   */
+  async function book(id: string) {
+    setBusy(true)
+    setError(null)
+
+    try {
+      await shipmentService.book(id)
+      await load()
+      await onChanged?.()
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'The carrier could not be reached')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function applyStatus() {
     if (!statusChange) return
 
@@ -132,7 +156,12 @@ export function OrderShipments({
     setError(null)
 
     try {
-      await shipmentService.setStatus(statusChange.id, { status: statusChange.status })
+      const result = await shipmentService.setStatus(statusChange.id, {
+        status: statusChange.status,
+      })
+      // The parcel is cancelled here either way; this says the courier was not
+      // told, which is the half an operator has to finish by hand.
+      if (result.carrierError) setError(result.carrierError)
       setStatusChange(null)
       await load()
       await onChanged?.()
@@ -294,6 +323,12 @@ export function OrderShipments({
                       {shipment.providerShipmentId ? ` · ${shipment.providerShipmentId}` : ''}
                     </p>
                   )}
+
+                  {shipment.codAmount > 0 && (
+                    <p className="mt-0.5 text-xs font-medium text-warning">
+                      Collect {formatPrice(shipment.codAmount)} on delivery
+                    </p>
+                  )}
                   <ul className="mt-1 text-xs text-ink-soft">
                     {shipment.items.map((item) => (
                       <li key={item.id}>
@@ -304,6 +339,11 @@ export function OrderShipments({
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {editable && shipment.canBook && (
+                    <Button size="sm" variant="ghost" loading={busy} onClick={() => void book(shipment.id)}>
+                      Book with carrier
+                    </Button>
+                  )}
                   {shipment.labelUrl && (
                     <a
                       href={shipment.labelUrl}
