@@ -77,6 +77,7 @@ export function SiteFooter({ nav, settings }: { nav: NavItem[]; settings: StoreS
                 { href: '/contact', label: 'Contact' },
                 { href: '/shipping-policy', label: 'Shipping' },
                 { href: '/returns-policy', label: 'Returns policy' },
+                { href: '/terms', label: 'Terms & conditions' },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
