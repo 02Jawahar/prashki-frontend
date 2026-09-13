@@ -166,7 +166,13 @@ export function AdminSidebar() {
         <Menu className="size-4" strokeWidth={1.5} />
       </button>
 
-      <aside className="hidden w-60 shrink-0 border-r border-rule bg-white lg:block">
+      {/*
+        Sticky and self-scrolling. As an ordinary flex child it rode the page
+        scroll and the navigation left the screen on any list long enough to
+        scroll — which is most of them. `h-screen` pins it to the viewport and
+        `overflow-y-auto` gives the nav its own scrollbar for short windows.
+      */}
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-rule bg-white lg:block">
         <div className="border-b border-rule px-5 py-5">
           <Link href="/admin" className="block">
             <Image
