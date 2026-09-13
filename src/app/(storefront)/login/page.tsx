@@ -43,13 +43,6 @@ export default async function LoginPage({
             Create an account
           </Link>
         </p>
-
-        <p className="mt-8 border border-sage-200 bg-sage-50 p-4 text-xs leading-relaxed text-ink-soft">
-          Demo account seeded for local development:
-          <br />
-          <span className="text-ink">customer@example.com</span> /{' '}
-          <span className="text-ink">Customer@12345</span>
-        </p>
       </div>
     </div>
   )
