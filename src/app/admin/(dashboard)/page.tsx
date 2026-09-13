@@ -24,6 +24,13 @@ export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<RecentOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /**
+   * Tracked separately from `orders` being empty. Swallowing the failure and
+   * rendering the empty state told the reader "no orders yet" when the truth
+   * was "we could not ask" — indistinguishable on the one screen someone
+   * checks to see whether the store is selling.
+   */
+  const [ordersFailed, setOrdersFailed] = useState(false)
 
   useEffect(() => {
     void (async () => {
@@ -31,10 +38,11 @@ export default function AdminDashboardPage() {
         // Every figure below is a live database query — no placeholder numbers.
         const [s, o] = await Promise.all([
           adminService.stats(),
-          adminService.recentOrders().catch(() => []),
+          adminService.recentOrders().catch(() => null),
         ])
         setStats(s)
-        setOrders(o as RecentOrder[])
+        setOrdersFailed(o === null)
+        setOrders((o ?? []) as RecentOrder[])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not load the dashboard')
       } finally {
@@ -108,7 +116,14 @@ export default function AdminDashboardPage() {
                 </Link>
               </header>
 
-              {orders.length === 0 ? (
+              {ordersFailed ? (
+                <div className="p-5">
+                  <Alert tone="danger">
+                    Recent orders could not be loaded. The figures above are unaffected — reload to
+                    try again.
+                  </Alert>
+                </div>
+              ) : orders.length === 0 ? (
                 <div className="p-5">
                   <EmptyState title="No orders yet" body="Orders will appear here once customers check out." />
                 </div>
