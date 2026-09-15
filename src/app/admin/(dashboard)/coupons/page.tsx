@@ -21,6 +21,7 @@ import {
   Textarea,
 } from '@/components/ui'
 import type { AdminCategory } from '@/types/api'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 
 /**
  * Coupon administration (M13).
@@ -38,6 +39,7 @@ export default function AdminCouponsPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [editing, setEditing] = useState<Coupon | 'new' | null>(null)
+  const editorRef = useScrollToEditor(Boolean(editing))
   const [confirming, setConfirming] = useState<Coupon | null>(null)
   const [removing, setRemoving] = useState(false)
 
@@ -99,6 +101,7 @@ export default function AdminCouponsPage() {
       {notice && <Alert tone="info">{notice}</Alert>}
 
       {editing && (
+        <div ref={editorRef} className="scroll-mt-6">
         <CouponForm
           coupon={editing === 'new' ? undefined : editing}
           categories={categories}
@@ -108,6 +111,7 @@ export default function AdminCouponsPage() {
           }}
           onCancel={() => setEditing(null)}
         />
+        </div>
       )}
 
       <div className="mt-5 border border-rule bg-white">

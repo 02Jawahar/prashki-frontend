@@ -237,6 +237,20 @@ export type HomeSection =
   | { type: 'new-arrivals'; heading: string; limit: number }
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'category-banner'; heading: string; slugs: string[] }
+  /**
+   * A row of vertical films that play on hover — the hero, split.
+   *
+   * `poster` is not optional in practice: it is what shows before a video is
+   * fetched, what a touch device shows until the tile is tapped, and what
+   * someone who has asked for reduced motion sees instead of movement. Without
+   * it the row is a set of blank rectangles until four videos have downloaded.
+   */
+  | {
+      type: 'video-grid'
+      eyebrow: string
+      heading: string
+      items: Array<{ video: string; poster: string; label: string; href: string }>
+    }
   | { type: 'newsletter'; heading: string; body: string }
   | { type: 'showcase'; heading: string; body?: string; limit?: number }
 

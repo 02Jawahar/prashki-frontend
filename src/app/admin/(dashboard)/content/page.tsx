@@ -25,6 +25,13 @@ type Section =
   | { type: 'new-arrivals'; heading: string; limit: number }
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'category-banner'; heading: string; slugs: string[] }
+  | {
+      type: 'video-grid'
+      eyebrow: string
+      heading: string
+      items: Array<{ video: string; poster: string; label: string; href: string }>
+    }
+  | { type: 'showcase'; heading: string; body: string; limit: number }
   | { type: 'newsletter'; heading: string; body: string }
 
 const SECTION_LABELS: Record<Section['type'], string> = {
@@ -34,6 +41,8 @@ const SECTION_LABELS: Record<Section['type'], string> = {
   'new-arrivals': 'New arrivals',
   banner: 'Editorial banner',
   'category-banner': 'Shop by category',
+  'video-grid': 'Film wall',
+  showcase: 'Customer showcase',
   newsletter: 'Newsletter',
 }
 
@@ -51,6 +60,17 @@ function blankSection(type: Section['type'], categories: AdminCategory[]): Secti
       return { type, heading: 'New Arrivals', limit: 8 }
     case 'category-banner':
       return { type, heading: 'Shop by category', slugs: categories.filter((c) => c.parent).slice(0, 5).map((c) => c.slug) }
+    case 'video-grid':
+      // Four is what the row is designed around; the grid is four across on
+      // desktop and two on mobile, so any other count leaves a gap.
+      return {
+        type,
+        eyebrow: '',
+        heading: 'New collection',
+        items: Array.from({ length: 4 }, () => ({ video: '', poster: '', label: '', href: '/products' })),
+      }
+    case 'showcase':
+      return { type, heading: 'Follow us', body: '', limit: 8 }
     case 'newsletter':
       return { type, heading: 'Subscribe to our newsletter', body: 'Early access to new collections.' }
   }
@@ -427,6 +447,158 @@ function SectionFields({
             </div>
             <p className="field-hint">Each tile uses that category&rsquo;s image.</p>
           </div>
+        </>
+      )
+
+    case 'video-grid':
+      return (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Eyebrow" htmlFor="eyebrow" hint="Small line above the title.">
+              <Input
+                value={section.eyebrow}
+                disabled={readOnly}
+                onChange={(e) => onChange({ eyebrow: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+            <Field label="Title" htmlFor="heading" hint="Sits over the films, centred.">
+              <Input
+                value={section.heading}
+                disabled={readOnly}
+                onChange={(e) => onChange({ heading: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+          </div>
+
+          <p className="mt-5 text-xs text-ink-soft">
+            Each film plays when someone hovers it, and shows its poster until then. The poster is
+            not optional — it is what a phone shows before the film is tapped, and what someone who
+            has asked for reduced motion sees instead of movement.
+          </p>
+
+          <div className="mt-3 space-y-4">
+            {section.items.map((item, i) => (
+              <div key={i} className="border border-rule p-4">
+                <p className="label-caps mb-3 text-xs">Film {i + 1}</p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <MediaPicker
+                    value={item.video}
+                    label="Film"
+                    folder="home"
+                    hint="A web-sized MP4. A camera master will load for minutes."
+                    onChange={(video) =>
+                      onChange({
+                        items: section.items.map((x, j) => (j === i ? { ...x, video } : x)),
+                      } as Partial<Section>)
+                    }
+                  />
+                  <MediaPicker
+                    value={item.poster}
+                    label="Poster"
+                    folder="home"
+                    hint="Shown before the film plays."
+                    onChange={(poster) =>
+                      onChange({
+                        items: section.items.map((x, j) => (j === i ? { ...x, poster } : x)),
+                      } as Partial<Section>)
+                    }
+                  />
+
+                  <Field label="Caption" htmlFor={`vg-label-${i}`} hint="Shown on hover. Also the link's description for screen readers.">
+                    <Input
+                      value={item.label}
+                      disabled={readOnly}
+                      onChange={(e) =>
+                        onChange({
+                          items: section.items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)),
+                        } as Partial<Section>)
+                      }
+                    />
+                  </Field>
+
+                  <Field label="Links to" htmlFor={`vg-href-${i}`}>
+                    <Input
+                      value={item.href}
+                      placeholder="/products"
+                      disabled={readOnly}
+                      onChange={(e) =>
+                        onChange({
+                          items: section.items.map((x, j) => (j === i ? { ...x, href: e.target.value } : x)),
+                        } as Partial<Section>)
+                      }
+                    />
+                  </Field>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {!readOnly && (
+            <div className="mt-4 flex gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  onChange({
+                    items: [...section.items, { video: '', poster: '', label: '', href: '/products' }],
+                  } as Partial<Section>)
+                }
+              >
+                Add a film
+              </Button>
+              {section.items.length > 1 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onChange({ items: section.items.slice(0, -1) } as Partial<Section>)}
+                >
+                  Remove the last
+                </Button>
+              )}
+            </div>
+          )}
+        </>
+      )
+
+    case 'showcase':
+      return (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Heading" htmlFor="heading">
+              <Input
+                value={section.heading}
+                disabled={readOnly}
+                onChange={(e) => onChange({ heading: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+            <Field label="How many" htmlFor="limit" hint="Tiles to show. The rest stay in Showcase.">
+              <Input
+                type="number"
+                min={1}
+                max={24}
+                value={section.limit}
+                disabled={readOnly}
+                onChange={(e) => onChange({ limit: Number(e.target.value || 8) } as Partial<Section>)}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-4">
+            <Field label="Body" htmlFor="body">
+              <Textarea
+                rows={2}
+                value={section.body}
+                disabled={readOnly}
+                onChange={(e) => onChange({ body: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+          </div>
+
+          <p className="mt-3 text-xs text-ink-soft">
+            The tiles themselves are managed in Storefront &rarr; Showcase, where each one records
+            the customer&rsquo;s permission before it can be published.
+          </p>
         </>
       )
 

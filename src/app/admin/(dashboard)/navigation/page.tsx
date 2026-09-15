@@ -14,13 +14,14 @@ import { Alert, Button, EmptyState, Field, Input, SkeletonRows } from '@/compone
  * lives in a JSON setting, and the Settings screen filters JSON out on purpose,
  * so changing a link meant a deploy.
  *
- * Three levels, which is what the header draws — a top-level item, the column
- * headings under it, and the links in each column. The whole tree is saved at
- * once rather than per-row, because a menu is read as a shape: moving an item
- * between columns is one edit to a person and would be three requests to a
- * row-at-a-time API, with a half-applied menu live on the storefront in between.
+ * Four levels, which is what the header draws — a top-level item, the columns
+ * under it, the groups inside a column, and the links in each group. The whole
+ * tree is saved at once rather than per-row, because a menu is read as a shape:
+ * moving an item between columns is one edit to a person and would be three
+ * requests to a row-at-a-time API, with a half-applied menu live on the
+ * storefront in between.
  */
-const MAX_DEPTH = 3
+const MAX_DEPTH = 4
 
 /** Where a node sits in the tree, e.g. [0, 2] = third child of the first item. */
 type Path = number[]
@@ -110,8 +111,8 @@ export default function AdminNavigationPage() {
             The menu across the top of the storefront. Order here is order on the page.
           </p>
           <p className="mt-1 text-xs text-ink-soft">
-            Three levels: a menu item, the headings in its dropdown, and the links under each
-            heading. Links are paths on this site, like <code>/products</code>.
+            Four levels: a menu item, the columns in its dropdown, the groups inside a column,
+            and the links in each group. Links are paths on this site, like <code>/products</code>.
           </p>
         </div>
         {editable && (
@@ -190,7 +191,9 @@ function Row({
   return (
     <div className={`border border-rule bg-white p-4 ${depth > 1 ? 'border-l-2 border-l-sage-300' : ''}`}>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label={depth === 1 ? 'Menu item' : depth === 2 ? 'Heading' : 'Link'} htmlFor={`l-${path.join('-')}`}>
+        <Field label={
+            depth === 1 ? 'Menu item' : depth === 2 ? 'Column' : depth === 3 ? 'Group' : 'Link'
+          } htmlFor={`l-${path.join('-')}`}>
           <Input
             id={`l-${path.join('-')}`}
             value={node.label}
@@ -228,7 +231,7 @@ function Row({
               }
             >
               <Plus className="size-3.5" strokeWidth={2} />
-              {depth === 1 ? 'Add heading' : 'Add link'}
+              {depth === 1 ? 'Add column' : depth === 2 ? 'Add group' : 'Add link'}
             </Button>
           )}
 
@@ -254,7 +257,7 @@ function Row({
 
           {children.length > 0 && (
             <span className="text-xs text-ink-soft">
-              {children.length} {depth === 1 ? 'heading' : 'link'}
+              {children.length} {depth === 1 ? 'column' : depth === 2 ? 'group' : 'link'}
               {children.length === 1 ? '' : 's'}
             </span>
           )}

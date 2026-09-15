@@ -18,6 +18,7 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { AdminCategory } from '@/types/api'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 
 export default function AdminCategoriesPage() {
   const { can } = useAuth()
@@ -25,6 +26,7 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<AdminCategory | 'new' | null>(null)
+  const editorRef = useScrollToEditor(Boolean(editing))
   const [deleting, setDeleting] = useState<AdminCategory | null>(null)
   const [removing, setRemoving] = useState(false)
 
@@ -79,6 +81,7 @@ export default function AdminCategoriesPage() {
       {error && <Alert>{error}</Alert>}
 
       {editing && (
+        <div ref={editorRef} className="scroll-mt-6">
         <CategoryForm
           category={editing === 'new' ? undefined : editing}
           categories={categories}
@@ -88,6 +91,7 @@ export default function AdminCategoriesPage() {
           }}
           onCancel={() => setEditing(null)}
         />
+        </div>
       )}
 
       <div className="mt-5 border border-rule bg-white">

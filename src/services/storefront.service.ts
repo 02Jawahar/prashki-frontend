@@ -1,5 +1,5 @@
 import { apiClient } from './api-client'
-import type { Pagination } from '@/types/api'
+import type { Pagination, ProductListItem } from '@/types/api'
 
 /**
  * Customer-facing services for the modules added after the boilerplate:
@@ -229,6 +229,91 @@ export const returnService = {
 
   cancel: (id: string) =>
     apiClient.post<{ request: ReturnRequest }>(`/returns/${id}/cancel`).then((r) => r.data.request),
+}
+
+// ------------------------------------------------------------ gift cards
+
+export interface GiftCardOptions {
+  denominations: number[]
+  custom: { min: number; max: number }
+  currency: string
+}
+
+export interface GiftCardBalance {
+  code: string
+  balance: number
+  currency: string
+  expiresAt: string | null
+}
+
+export const giftCardService = {
+  options: () =>
+    apiClient.get<GiftCardOptions>('/gift-cards/options').then((r) => r.data),
+
+  /** Signed-in only — an open balance endpoint is a way to guess codes. */
+  balance: (code: string) =>
+    apiClient.post<GiftCardBalance>('/gift-cards/balance', { code }).then((r) => r.data),
+
+  /**
+   * Buys one. Returns the order to pay for — the code is not sent back, because
+   * nothing has been paid for yet and the code is worth money.
+   */
+  purchase: (input: {
+    amount: number
+    recipientName?: string
+    recipientEmail?: string
+    message?: string
+    sendToMe?: boolean
+  }) =>
+    apiClient
+      .post<{ order: { id: string; orderNumber: string; total: number } }>(
+        '/gift-cards/purchase',
+        input,
+      )
+      .then((r) => r.data.order),
+
+  mine: () =>
+    apiClient
+      .get<{
+        giftCards: Array<{
+          id: string
+          code: string
+          initialValue: number
+          balance: number
+          status: string
+          recipientName: string | null
+          recipientEmail: string | null
+          expiresAt: string | null
+          createdAt: string
+        }>
+      }>('/gift-cards/mine')
+      .then((r) => r.data.giftCards),
+}
+
+// ----------------------------------------------------------- collections
+
+/** A seasonal drop, as shown on Discover. */
+export interface Collection {
+  id: string
+  name: string
+  slug: string
+  year: number | null
+  description: string | null
+  coverImage: string | null
+  seoTitle: string | null
+  seoDescription: string | null
+  publishedAt: string | null
+  productCount?: number
+}
+
+export const collectionService = {
+  list: () =>
+    apiClient.get<{ collections: Collection[] }>('/collections').then((r) => r.data.collections),
+
+  bySlug: (slug: string) =>
+    apiClient
+      .get<{ collection: Collection; products: ProductListItem[] }>(`/collections/${slug}`)
+      .then((r) => r.data),
 }
 
 // -------------------------------------------------------------- wishlist

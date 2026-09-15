@@ -9,7 +9,7 @@ import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
 import { addressService, orderService, type Address } from '@/services/order.service'
 import { paymentService } from '@/services/payment.service'
-import { shippingService, type ShippingQuote } from '@/services/storefront.service'
+import { giftCardService, shippingService, type ShippingQuote } from '@/services/storefront.service'
 import { loadRazorpay } from '@/lib/razorpay'
 import { ApiRequestError } from '@/services/api-client'
 import { formatPrice } from '@/lib/money'
@@ -32,6 +32,16 @@ export function CheckoutClient() {
   const [methodId, setMethodId] = useState<string | null>(null)
   const [quoting, setQuoting] = useState(false)
   const [deliverable, setDeliverable] = useState(true)
+
+  /**
+   * A gift card is payment, not discount: it is validated here but applied by
+   * the server when the order is created, against the total it calculates
+   * itself. Nothing on this page decides how much comes off.
+   */
+  const [giftCode, setGiftCode] = useState('')
+  const [giftCard, setGiftCard] = useState<{ code: string; balance: number } | null>(null)
+  const [giftChecking, setGiftChecking] = useState(false)
+  const [giftError, setGiftError] = useState<string | null>(null)
   /** The server's own explanation — "too heavy", "we don't reach that PIN". */
   const [deliveryReason, setDeliveryReason] = useState<string | null>(null)
 
@@ -115,6 +125,24 @@ export function CheckoutClient() {
    * can always be matched back to something. Nothing here decides that the
    * order is paid — only the server's signature check and the webhook do.
    */
+  async function applyGiftCard() {
+    const code = giftCode.trim()
+    if (!code || giftChecking) return
+
+    setGiftChecking(true)
+    setGiftError(null)
+
+    try {
+      const card = await giftCardService.balance(code)
+      setGiftCard({ code: card.code, balance: card.balance })
+    } catch (err) {
+      setGiftCard(null)
+      setGiftError(err instanceof ApiRequestError ? err.message : 'We could not check that code.')
+    } finally {
+      setGiftChecking(false)
+    }
+  }
+
   async function placeOrder() {
     if (!selectedId || placing) return
 
@@ -129,6 +157,7 @@ export function CheckoutClient() {
         addressId: selectedId,
         notes: notes || undefined,
         shippingMethodId: methodId ?? undefined,
+        giftCardCode: giftCard?.code,
         idempotencyKey,
       })
       order = result.order
@@ -434,6 +463,57 @@ export function CheckoutClient() {
                 </li>
               ))}
             </ul>
+
+            {/*
+              Checked here, applied by the server. What comes off is whichever
+              is smaller — the balance or what is owed — so the figure shown is
+              an estimate until the order exists.
+            */}
+            <div className="border-t border-rule py-5">
+              {giftCard ? (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2">
+                    <Check className="size-4 text-sage-700" strokeWidth={2} />
+                    {giftCard.code} &middot; {formatPrice(giftCard.balance)} available
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGiftCard(null)
+                      setGiftCode('')
+                    }}
+                    className="text-xs text-ink-soft underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Gift card code"
+                    value={giftCode}
+                    onChange={(e) => setGiftCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        void applyGiftCard()
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    loading={giftChecking}
+                    onClick={() => void applyGiftCard()}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+
+              {giftError && <p className="mt-2 text-xs text-danger">{giftError}</p>}
+            </div>
 
             <dl className="space-y-3 py-5 text-sm">
               <div className="flex justify-between">

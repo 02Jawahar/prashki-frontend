@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { rbacService, type Role, type StaffMember } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
 import { formatDate } from '@/lib/utils'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 import {
   Alert,
   Button,
@@ -42,6 +43,7 @@ export default function AdminStaffPage() {
 
   const [inviting, setInviting] = useState(false)
   const [editingRoles, setEditingRoles] = useState<StaffMember | null>(null)
+  const editorRef = useScrollToEditor(Boolean(editingRoles))
   const [suspending, setSuspending] = useState<StaffMember | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -120,6 +122,7 @@ export default function AdminStaffPage() {
       )}
 
       {editingRoles && (
+        <div ref={editorRef} className="scroll-mt-6">
         <RoleAssignment
           member={editingRoles}
           roles={roles}
@@ -132,6 +135,7 @@ export default function AdminStaffPage() {
           onCancel={() => setEditingRoles(null)}
           busy={busy}
         />
+        </div>
       )}
 
       <div className="relative mb-5 mt-5 max-w-sm">

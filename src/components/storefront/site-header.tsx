@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Menu, Search, ShoppingBag, User, X, ChevronDown } from 'lucide-react'
+import { Heart, Menu, Search, ShoppingBag, User, X, ChevronDown } from 'lucide-react'
 import { SearchOverlay } from './search-overlay'
 import { MobileMenu } from './mobile-menu'
 import { NotificationBell } from './notification-bell'
@@ -24,12 +24,37 @@ import type { NavItem } from '@/types/api'
  * Children that have children of their own become named columns — "Featured",
  * "Women's" — with the heading itself a link to that landing page. Children
  * without any become a single unheaded column, which is what a short menu
- * wants and what this used to do for every menu.
+ * wants.
+ *
+ * A column's own children may go one level deeper again: "Women's" holds the
+ * four ranges, and each range holds its garment types. That fourth level is
+ * where the menu stops, for a reason that is visual rather than technical — a
+ * column deep enough to need a fifth is taller than the panel it sits in.
  *
  * Columns are laid out on a fixed 4-track grid rather than `auto-fit`, so two
  * columns sit at the left edge under the navigation that opened them instead
  * of stretching across the full width away from the cursor.
+ *
+ * Keys are label-and-position, not href. Two columns legitimately point at the
+ * same landing page — "Featured" and "Women's" both open /products — so href
+ * collides, and React silently drops one of the duplicates.
  */
+function MenuLink({
+  node,
+  onNavigate,
+  className = 'link-underline text-[0.9rem] text-ink hover:text-sage-700',
+}: {
+  node: NavItem
+  onNavigate: () => void
+  className?: string
+}) {
+  return (
+    <Link href={node.href} onClick={onNavigate} className={className}>
+      {node.label}
+    </Link>
+  )
+}
+
 function MegaMenu({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
   const children = item.children ?? []
   const columns = children.filter((child) => child.children?.length)
@@ -41,40 +66,54 @@ function MegaMenu({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
         <div className={columns.length > 0 ? '' : 'col-span-2'}>
           <p className="eyebrow mb-4 text-ink-soft">{item.label}</p>
           <ul className={`grid gap-x-8 gap-y-2.5 ${columns.length > 0 ? '' : 'grid-cols-2'}`}>
-            {loose.map((child) => (
-              <li key={child.href}>
-                <Link
-                  href={child.href}
-                  onClick={onNavigate}
-                  className="link-underline text-[0.9rem] text-ink hover:text-sage-700"
-                >
-                  {child.label}
-                </Link>
+            {loose.map((child, index) => (
+              <li key={`${child.label}-${index}`}>
+                <MenuLink node={child} onNavigate={onNavigate} />
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {columns.map((column) => (
-        <div key={column.href}>
-          <Link
-            href={column.href}
-            onClick={onNavigate}
+      {columns.map((column, index) => (
+        <div key={`${column.label}-${index}`}>
+          <MenuLink
+            node={column}
+            onNavigate={onNavigate}
             className="eyebrow link-underline mb-4 block text-ink"
-          >
-            {column.label}
-          </Link>
+          />
+
           <ul className="space-y-2.5">
-            {(column.children ?? []).map((child) => (
-              <li key={child.href}>
-                <Link
-                  href={child.href}
-                  onClick={onNavigate}
-                  className="link-underline text-[0.9rem] text-ink hover:text-sage-700"
-                >
-                  {child.label}
-                </Link>
+            {(column.children ?? []).map((child, childIndex) => (
+              <li key={`${child.label}-${childIndex}`}>
+                {child.children?.length ? (
+                  /*
+                   * A range inside a column — "Casual" with its garment types
+                   * beneath. The range name is set in the body colour and its
+                   * types in the softer one, so the eye can tell a heading from
+                   * a destination without an indent doing all the work.
+                   */
+                  <>
+                    <MenuLink
+                      node={child}
+                      onNavigate={onNavigate}
+                      className="link-underline mb-1.5 block text-[0.9rem] font-medium text-ink"
+                    />
+                    <ul className="mb-3 space-y-1.5 border-l border-hairline pl-3">
+                      {child.children.map((grandchild, grandchildIndex) => (
+                        <li key={`${grandchild.label}-${grandchildIndex}`}>
+                          <MenuLink
+                            node={grandchild}
+                            onNavigate={onNavigate}
+                            className="link-underline text-[0.85rem] text-ink-soft hover:text-sage-700"
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <MenuLink node={child} onNavigate={onNavigate} />
+                )}
               </li>
             ))}
           </ul>
@@ -160,6 +199,18 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               </button>
 
               <NotificationBell />
+
+              {/*
+                Saved pieces. Shown only when signed in, because the wishlist
+                lives on the account — offering it to a guest leads to a login
+                wall reached by pressing a heart, which reads as being refused
+                rather than being asked to sign in.
+              */}
+              {user && (
+                <Link href="/account/wishlist" aria-label="Saved pieces" className="hidden sm:block">
+                  <Heart className="size-5" strokeWidth={1.4} />
+                </Link>
+              )}
 
               <Link
                 href={user ? '/account' : '/login'}

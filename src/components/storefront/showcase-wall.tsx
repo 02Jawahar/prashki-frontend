@@ -60,19 +60,23 @@ export function ShowcaseWall({
   return (
     <section className="py-16 md:py-20" aria-labelledby="showcase-heading">
       <div className="container-pk">
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <h2 id="showcase-heading" className="display text-[2rem] md:text-[2.6rem]">
-              {heading}
-            </h2>
-            {body && <p className="mt-3 max-w-md text-[0.95rem] text-ink-soft">{body}</p>}
-          </div>
+        {/*
+          Centred over the wall, the way the reference sets it. The pause
+          control sits under the heading rather than beside it — floated right
+          of a centred title it reads as belonging to the title, and on a narrow
+          screen it would push the title off centre.
+        */}
+        <div className="text-center">
+          <h2 id="showcase-heading" className="display text-[2rem] md:text-[2.6rem]">
+            {heading}
+          </h2>
+          {body && <p className="mx-auto mt-3 max-w-md text-[0.95rem] text-ink-soft">{body}</p>}
 
           {hasVideo && !reducedMotion && (
             <button
               type="button"
               onClick={() => setPlaying((current) => !current)}
-              className="label-caps shrink-0 border border-rule px-3.5 py-2 text-xs transition-colors hover:bg-sage-50"
+              className="label-caps mt-4 border border-rule px-3.5 py-2 text-xs transition-colors hover:bg-sage-50"
               // The label states what pressing it does, not what is happening.
               aria-label={playing ? 'Pause the showcase videos' : 'Play the showcase videos'}
             >

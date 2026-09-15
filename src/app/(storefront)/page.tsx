@@ -6,6 +6,7 @@ import { ProductGrid, SectionHeading } from '@/components/storefront/product-car
 import { SectionMedia } from '@/components/storefront/section-media'
 import { NewsletterForm } from '@/components/storefront/newsletter-form'
 import { ShowcaseWall } from '@/components/storefront/showcase-wall'
+import { VideoGrid } from '@/components/storefront/video-grid'
 import type { Category, HomeSection, ProductListItem, StoreSettings } from '@/types/api'
 
 export const metadata: Metadata = {
@@ -84,6 +85,8 @@ export default async function HomePage() {
         switch (section.type) {
           case 'hero':
             return <Hero key={i} data={section} />
+          case 'video-grid':
+            return <VideoGrid key={i} data={section} />
           case 'services':
             return <Services key={i} items={section.items} />
           case 'featured-products':

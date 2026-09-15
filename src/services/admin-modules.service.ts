@@ -193,6 +193,126 @@ export const shippingAdminService = {
       .then((r) => r.data),
 }
 
+// ------------------------------------------------------------ gift cards
+
+export type GiftCardStatus = 'PENDING' | 'ACTIVE' | 'REDEEMED' | 'EXPIRED' | 'CANCELLED'
+
+export interface AdminGiftCard {
+  id: string
+  code: string
+  initialValue: number
+  balance: number
+  currency: string
+  status: GiftCardStatus
+  recipientName: string | null
+  recipientEmail: string | null
+  message: string | null
+  orderId: string | null
+  expiresAt: string | null
+  issuedAt: string | null
+  createdAt: string
+  purchaser: { id: string; name: string; email: string } | null
+  transactions?: Array<{
+    id: string
+    type: 'ISSUE' | 'REDEEM' | 'REFUND' | 'ADJUST'
+    amount: number
+    balanceAfter: number
+    orderId: string | null
+    note: string | null
+    createdAt: string
+  }>
+}
+
+export const giftCardAdminService = {
+  list: (query: { q?: string; status?: string; page?: number } = {}) =>
+    apiClient
+      .get<{ giftCards: AdminGiftCard[] }>(`/admin/gift-cards${qs(query)}`)
+      .then((r) => ({ giftCards: r.data.giftCards, pagination: r.pagination as Pagination })),
+
+  byId: (id: string) =>
+    apiClient
+      .get<{ giftCard: AdminGiftCard }>(`/admin/gift-cards/${id}`)
+      .then((r) => r.data.giftCard),
+
+  issue: (input: {
+    amount: number
+    recipientName?: string | null
+    recipientEmail?: string | null
+    message?: string | null
+    note?: string | null
+  }) =>
+    apiClient
+      .post<{ giftCard: AdminGiftCard }>('/admin/gift-cards', input)
+      .then((r) => r.data.giftCard),
+
+  /** Cancels rather than deletes — the ledger still has to add up. */
+  cancel: (id: string, note?: string) =>
+    apiClient
+      .post<{ giftCard: AdminGiftCard }>(`/admin/gift-cards/${id}/cancel`, { note })
+      .then((r) => r.data.giftCard),
+}
+
+// ----------------------------------------------------------- collections
+
+export type CollectionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+
+export interface AdminCollection {
+  id: string
+  name: string
+  slug: string
+  year: number | null
+  description: string | null
+  coverImage: string | null
+  status: CollectionStatus
+  position: number
+  seoTitle: string | null
+  seoDescription: string | null
+  publishedAt: string | null
+  productCount?: number
+  products?: Array<{ id: string; name: string; sku: string; slug: string }>
+}
+
+export interface CollectionInput {
+  name: string
+  slug: string
+  year?: number | null
+  description?: string | null
+  coverImage?: string | null
+  seoTitle?: string | null
+  seoDescription?: string | null
+  status: CollectionStatus
+  position: number
+  productIds: string[]
+}
+
+export const collectionAdminService = {
+  list: () =>
+    apiClient
+      .get<{ collections: AdminCollection[] }>('/admin/collections')
+      .then((r) => r.data.collections),
+
+  byId: (id: string) =>
+    apiClient
+      .get<{ collection: AdminCollection }>(`/admin/collections/${id}`)
+      .then((r) => r.data.collection),
+
+  create: (input: CollectionInput) =>
+    apiClient
+      .post<{ collection: AdminCollection }>('/admin/collections', input)
+      .then((r) => r.data.collection),
+
+  update: (id: string, input: Partial<CollectionInput>) =>
+    apiClient
+      .patch<{ collection: AdminCollection }>(`/admin/collections/${id}`, input)
+      .then((r) => r.data.collection),
+
+  /** A collection that has been live is archived, not deleted; the reply says which. */
+  remove: (id: string) =>
+    apiClient
+      .delete<{ deleted: boolean; message?: string }>(`/admin/collections/${id}`)
+      .then((r) => r.data),
+}
+
 // ------------------------------------------------------------ navigation
 
 /**

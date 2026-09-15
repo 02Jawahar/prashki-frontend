@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { redirectService, type Redirect } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
 import { formatDate } from '@/lib/utils'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 import {
   Alert,
   Button,
@@ -32,6 +33,7 @@ export default function AdminRedirectsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [editing, setEditing] = useState<Redirect | 'new' | null>(null)
+  const editorRef = useScrollToEditor(Boolean(editing))
   const [deleting, setDeleting] = useState<Redirect | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -87,6 +89,7 @@ export default function AdminRedirectsPage() {
       {error && <Alert>{error}</Alert>}
 
       {editing && (
+        <div ref={editorRef} className="scroll-mt-6">
         <RedirectForm
           redirect={editing === 'new' ? undefined : editing}
           onDone={async () => {
@@ -95,6 +98,7 @@ export default function AdminRedirectsPage() {
           }}
           onCancel={() => setEditing(null)}
         />
+        </div>
       )}
 
       <div className="mt-5 border border-rule bg-white">

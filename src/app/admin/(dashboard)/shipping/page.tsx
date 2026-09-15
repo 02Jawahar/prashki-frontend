@@ -12,6 +12,7 @@ import {
 } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
 import { formatPrice } from '@/lib/money'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 import {
   Alert,
   Button,
@@ -50,6 +51,12 @@ export default function AdminShippingPage() {
     { kind: 'zone' | 'method'; id: string; name: string } | null
   >(null)
   const [removing, setRemoving] = useState(false)
+
+  // One ref per form — all three open in the same place, but only the one that
+  // was asked for should pull the page.
+  const zoneRef = useScrollToEditor(Boolean(editingZone))
+  const methodRef = useScrollToEditor(Boolean(editingMethod))
+  const ratesRef = useScrollToEditor(Boolean(editingRates))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -121,6 +128,7 @@ export default function AdminShippingPage() {
       {carriers.length > 0 && <Carriers carriers={carriers} />}
 
       {editingZone && (
+        <div ref={zoneRef} className="scroll-mt-6">
         <ZoneForm
           zone={editingZone === 'new' ? undefined : editingZone}
           onDone={async () => {
@@ -129,9 +137,11 @@ export default function AdminShippingPage() {
           }}
           onCancel={() => setEditingZone(null)}
         />
+        </div>
       )}
 
       {editingMethod && (
+        <div ref={methodRef} className="scroll-mt-6">
         <MethodForm
           zoneId={editingMethod.zoneId}
           method={editingMethod.method}
@@ -142,9 +152,11 @@ export default function AdminShippingPage() {
           }}
           onCancel={() => setEditingMethod(null)}
         />
+        </div>
       )}
 
       {editingRates && (
+        <div ref={ratesRef} className="scroll-mt-6">
         <RateBandsForm
           method={editingRates}
           onDone={async () => {
@@ -154,6 +166,7 @@ export default function AdminShippingPage() {
           }}
           onCancel={() => setEditingRates(null)}
         />
+        </div>
       )}
 
       {loading ? (

@@ -9,6 +9,7 @@ import {
 } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
 import { useAuth } from '@/hooks/use-auth'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 import {
   Alert,
   Button,
@@ -43,6 +44,7 @@ export default function AdminRolesPage() {
   const [notice, setNotice] = useState<string | null>(null)
 
   const [editing, setEditing] = useState<Role | 'new' | null>(null)
+  const editorRef = useScrollToEditor(Boolean(editing))
   const [deleting, setDeleting] = useState<Role | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -109,6 +111,7 @@ export default function AdminRolesPage() {
       {notice && <Alert tone="info">{notice}</Alert>}
 
       {editing && (
+        <div ref={editorRef} className="scroll-mt-6">
         <RoleForm
           role={editing === 'new' ? undefined : editing}
           groups={groups}
@@ -120,6 +123,7 @@ export default function AdminRolesPage() {
           }}
           onCancel={() => setEditing(null)}
         />
+        </div>
       )}
 
       {loading ? (

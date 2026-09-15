@@ -106,6 +106,7 @@ export const orderService = {
     notes?: string
     shippingMethodId?: string
     idempotencyKey?: string
+    giftCardCode?: string
   }) => apiClient.post<{ order: Order; replayed: boolean }>('/orders', input).then((r) => r.data),
 
   list: (page = 1) =>

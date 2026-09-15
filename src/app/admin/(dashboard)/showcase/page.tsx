@@ -12,6 +12,7 @@ import { adminService } from '@/services/admin.service'
 import { ApiRequestError } from '@/services/api-client'
 import { MediaPicker } from '@/components/admin/media-picker'
 import { formatDate } from '@/lib/utils'
+import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 import {
   Alert,
   Button,
@@ -62,6 +63,8 @@ export default function AdminShowcasePage() {
   const [editing, setEditing] = useState<AdminShowcaseItem | 'new' | null>(null)
   const [deleting, setDeleting] = useState<AdminShowcaseItem | null>(null)
   const [busy, setBusy] = useState(false)
+
+  const editorRef = useScrollToEditor(Boolean(editing))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -138,6 +141,7 @@ export default function AdminShowcasePage() {
       {notice && <Alert tone="success">{notice}</Alert>}
 
       {editing && (
+        <div ref={editorRef} className="scroll-mt-6">
         <ShowcaseForm
           item={editing === 'new' ? null : editing}
           products={products}
@@ -149,6 +153,7 @@ export default function AdminShowcasePage() {
             await load()
           }}
         />
+        </div>
       )}
 
       <div className="mt-6 border border-rule bg-white">

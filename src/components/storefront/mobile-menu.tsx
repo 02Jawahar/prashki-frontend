@@ -47,8 +47,8 @@ export function MobileMenu({
 
               {item.children?.length ? (
                 <ul className="mt-3 space-y-2.5 pl-1">
-                  {item.children.map((child) => (
-                    <li key={child.href}>
+                  {item.children.map((child, index) => (
+                    <li key={`${child.label}-${index}`}>
                       <Link href={child.href} onClick={onClose} className="text-[0.95rem] text-ink-soft">
                         {child.label}
                       </Link>
@@ -62,8 +62,8 @@ export function MobileMenu({
                       */}
                       {child.children?.length ? (
                         <ul className="mt-2 space-y-2 border-l border-hairline pl-3">
-                          {child.children.map((grandchild) => (
-                            <li key={grandchild.href}>
+                          {child.children.map((grandchild, grandchildIndex) => (
+                            <li key={`${grandchild.label}-${grandchildIndex}`}>
                               <Link
                                 href={grandchild.href}
                                 onClick={onClose}
@@ -71,6 +71,22 @@ export function MobileMenu({
                               >
                                 {grandchild.label}
                               </Link>
+
+                              {grandchild.children?.length ? (
+                                <ul className="mt-1.5 space-y-1.5 border-l border-hairline pl-3">
+                                  {grandchild.children.map((leaf, leafIndex) => (
+                                    <li key={`${leaf.label}-${leafIndex}`}>
+                                      <Link
+                                        href={leaf.href}
+                                        onClick={onClose}
+                                        className="text-[0.85rem] text-ink-soft"
+                                      >
+                                        {leaf.label}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
                             </li>
                           ))}
                         </ul>
