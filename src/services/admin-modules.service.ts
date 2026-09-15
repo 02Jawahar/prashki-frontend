@@ -193,6 +193,28 @@ export const shippingAdminService = {
       .then((r) => r.data),
 }
 
+// ------------------------------------------------------------ navigation
+
+/**
+ * The main menu tree. Recursive, capped at three levels by the API — the depth
+ * the storefront header can actually draw.
+ */
+export interface NavNode {
+  label: string
+  href: string
+  children?: NavNode[]
+}
+
+export const navigationService = {
+  get: () =>
+    apiClient
+      .get<{ items: NavNode[]; maxDepth: number }>('/admin/navigation')
+      .then((r) => r.data),
+
+  save: (items: NavNode[]) =>
+    apiClient.put<{ items: NavNode[] }>('/admin/navigation', { items }).then((r) => r.data.items),
+}
+
 // ------------------------------------------------------------ shipments
 
 export interface AdminShipment {

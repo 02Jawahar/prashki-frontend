@@ -18,6 +18,72 @@ import type { NavItem } from '@/types/api'
  * Navigation comes from the `nav.main` setting rather than being hard-coded, so
  * an admin-managed menu can replace the seed data without touching this file.
  */
+/**
+ * The panel that drops under a top-level item.
+ *
+ * Children that have children of their own become named columns — "Featured",
+ * "Women's" — with the heading itself a link to that landing page. Children
+ * without any become a single unheaded column, which is what a short menu
+ * wants and what this used to do for every menu.
+ *
+ * Columns are laid out on a fixed 4-track grid rather than `auto-fit`, so two
+ * columns sit at the left edge under the navigation that opened them instead
+ * of stretching across the full width away from the cursor.
+ */
+function MegaMenu({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
+  const children = item.children ?? []
+  const columns = children.filter((child) => child.children?.length)
+  const loose = children.filter((child) => !child.children?.length)
+
+  return (
+    <div className="container-pk grid grid-cols-4 gap-10 py-9">
+      {loose.length > 0 && (
+        <div className={columns.length > 0 ? '' : 'col-span-2'}>
+          <p className="eyebrow mb-4 text-ink-soft">{item.label}</p>
+          <ul className={`grid gap-x-8 gap-y-2.5 ${columns.length > 0 ? '' : 'grid-cols-2'}`}>
+            {loose.map((child) => (
+              <li key={child.href}>
+                <Link
+                  href={child.href}
+                  onClick={onNavigate}
+                  className="link-underline text-[0.9rem] text-ink hover:text-sage-700"
+                >
+                  {child.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {columns.map((column) => (
+        <div key={column.href}>
+          <Link
+            href={column.href}
+            onClick={onNavigate}
+            className="eyebrow link-underline mb-4 block text-ink"
+          >
+            {column.label}
+          </Link>
+          <ul className="space-y-2.5">
+            {(column.children ?? []).map((child) => (
+              <li key={child.href}>
+                <Link
+                  href={child.href}
+                  onClick={onNavigate}
+                  className="link-underline text-[0.9rem] text-ink hover:text-sage-700"
+                >
+                  {child.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: string }) {
   const { user } = useAuth()
   const { itemCount, openCart } = useCart()
@@ -123,24 +189,7 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               className="absolute inset-x-0 top-full hidden border-t border-hairline bg-white lg:block"
               onMouseEnter={() => setOpenGroup(item.label)}
             >
-              <div className="container-pk grid grid-cols-4 gap-10 py-9">
-                <div className="col-span-2">
-                  <p className="eyebrow mb-4 text-ink-soft">{item.label}</p>
-                  <ul className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-                    {item.children.map((child) => (
-                      <li key={child.href}>
-                        <Link
-                          href={child.href}
-                          onClick={() => setOpenGroup(null)}
-                          className="link-underline text-[0.9rem] text-ink hover:text-sage-700"
-                        >
-                          {child.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              <MegaMenu item={item} onNavigate={() => setOpenGroup(null)} />
             </div>
           ) : null,
         )}

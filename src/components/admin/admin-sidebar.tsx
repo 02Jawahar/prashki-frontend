@@ -82,6 +82,7 @@ const NAV: NavGroup[] = [
   {
     label: 'Storefront',
     entries: [
+      { label: 'Navigation', href: '/admin/navigation', icon: Menu, permission: 'settings.read' },
       { label: 'Content', href: '/admin/content', icon: LayoutTemplate, permission: 'settings.read' },
       { label: 'Pages', href: '/admin/pages', icon: FileText, permission: 'content.read' },
       { label: 'Redirects', href: '/admin/redirects', icon: Signpost, permission: 'content.read' },

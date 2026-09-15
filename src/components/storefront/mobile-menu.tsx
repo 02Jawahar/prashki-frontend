@@ -52,6 +52,29 @@ export function MobileMenu({
                       <Link href={child.href} onClick={onClose} className="text-[0.95rem] text-ink-soft">
                         {child.label}
                       </Link>
+
+                      {/*
+                        The third level is indented rather than collapsed behind
+                        another tap. On a phone the whole menu is already a
+                        scrolling list, and hiding four categories behind an
+                        accordion costs a tap to discover what is a short list
+                        anyway.
+                      */}
+                      {child.children?.length ? (
+                        <ul className="mt-2 space-y-2 border-l border-hairline pl-3">
+                          {child.children.map((grandchild) => (
+                            <li key={grandchild.href}>
+                              <Link
+                                href={grandchild.href}
+                                onClick={onClose}
+                                className="text-[0.9rem] text-ink-soft"
+                              >
+                                {grandchild.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

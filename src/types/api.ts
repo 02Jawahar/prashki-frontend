@@ -213,10 +213,21 @@ export interface StoreSettings {
   'home.sections'?: HomeSection[]
 }
 
+/**
+ * A menu entry, nested up to three levels:
+ *
+ *   Ready to Wear        top level
+ *     Women's            a column heading in the mega menu
+ *       Luxury Pret      a link in that column
+ *
+ * Recursive rather than a fixed two-level shape, because the column headings
+ * are themselves links to a landing page and need the same fields. The API
+ * refuses anything deeper than the header can draw.
+ */
 export interface NavItem {
   label: string
   href: string
-  children?: Array<{ label: string; href: string }>
+  children?: NavItem[]
 }
 
 export type HomeSection =
