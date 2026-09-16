@@ -97,6 +97,28 @@ export default async function DiscoverPage() {
                             ) : (
                               <div className="size-full bg-sage-100" />
                             )}
+
+                            {/*
+                              On hover, which drop this is and which range.
+                              Written over a wash rather than straight onto the
+                              photo: these are studio shots on white, and white
+                              type on them is invisible without something behind
+                              it.
+
+                              Hover only. The same words sit permanently under
+                              the tile, so a touch device loses nothing.
+                            */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/0 text-center opacity-0 transition-all duration-500 group-hover:bg-ink/40 group-hover:opacity-100 group-focus-visible:bg-ink/40 group-focus-visible:opacity-100">
+                              <span className="display text-[1.35rem] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] md:text-[1.6rem]">
+                                {collection.name}
+                                {collection.year !== null && (
+                                  <span className="ml-2 text-[0.75em]">{collection.year}</span>
+                                )}
+                              </span>
+                              <span className="label-caps mt-2 text-[0.7rem] text-white/90">
+                                {range.name}
+                              </span>
+                            </div>
                           </div>
 
                           {/*

@@ -213,6 +213,20 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               <Menu className="size-5" strokeWidth={1.4} />
             </button>
 
+            {/*
+              Search sits beside the hamburger on a phone, the way the
+              reference arranges it — the left of the bar is where a thumb
+              reaches, and it keeps the right side to the bag.
+            */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+              className={`-ml-1 transition-colors lg:hidden ${overHero ? 'text-white' : 'text-ink'}`}
+            >
+              <Search className="size-5" strokeWidth={1.4} />
+            </button>
+
             <nav className="hidden lg:order-1 lg:flex lg:flex-1 lg:items-center lg:gap-6 xl:gap-8">
               {nav.map((item) => (
                 <div key={item.label} onMouseEnter={() => setOpenGroup(item.label)}>
@@ -262,15 +276,17 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
                 type="button"
                 onClick={() => setSearchOpen(true)}
                 aria-label="Search"
-                className={`label-caps flex items-center gap-1.5 transition-colors ${
+                className={`label-caps hidden items-center gap-1.5 transition-colors lg:flex ${
                   overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
                 }`}
               >
                 <Search className="size-4" strokeWidth={1.5} />
-                <span className="hidden lg:inline">Search</span>
+                <span>Search</span>
               </button>
 
-              <NotificationBell />
+              <div className="hidden lg:block">
+                <NotificationBell />
+              </div>
 
               {/*
                 Saved pieces, shown to everyone. A guest who presses it lands on
@@ -281,7 +297,9 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               <Link
                 href={user ? '/account/wishlist' : '/login?next=/account/wishlist'}
                 aria-label="Saved pieces"
-                className={`transition-colors ${overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'}`}
+                className={`hidden transition-colors sm:block ${
+                  overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
+                }`}
               >
                 <Heart className="size-5" strokeWidth={1.4} />
               </Link>
@@ -289,7 +307,7 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               <Link
                 href={user ? '/account' : '/login'}
                 aria-label={user ? 'Your account' : 'Sign in'}
-                className={`hidden transition-colors sm:block ${
+                className={`transition-colors ${
                   overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
                 }`}
               >
@@ -304,7 +322,7 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
                 }`}
                 aria-label={`Bag, ${itemCount} items`}
               >
-                <ShoppingBag className="size-4 lg:hidden" strokeWidth={1.5} />
+                <ShoppingBag className="size-5 lg:hidden" strokeWidth={1.4} />
                 <span className="hidden lg:inline">Bag</span>
                 {itemCount > 0 && (
                   <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-sage-700 text-[0.6rem] font-medium text-white lg:-right-3">

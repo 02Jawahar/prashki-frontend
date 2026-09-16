@@ -124,13 +124,40 @@ export function SectionHeading({
   body,
   href,
   hrefLabel = 'View all',
+  align = 'center',
 }: {
   eyebrow?: string
   title: string
   body?: string
   href?: string
   hrefLabel?: string
+  /**
+   * `split` puts the title at the left and its link at the right of the same
+   * line, which is how a product row is labelled in the reference. `center` is
+   * for the sections that are an announcement rather than a shelf.
+   */
+  align?: 'center' | 'split'
 }) {
+  if (align === 'split') {
+    return (
+      <div className="flex items-baseline justify-between gap-6">
+        <div>
+          {eyebrow && <p className="eyebrow mb-2 text-sage-700">{eyebrow}</p>}
+          <h2 className="display text-[1.6rem] uppercase tracking-[0.08em] md:text-[2rem]">
+            {title}
+          </h2>
+          {body && <p className="mt-2 max-w-xl text-[0.92rem] text-ink-soft">{body}</p>}
+        </div>
+
+        {href && (
+          <Link href={href} className="label-caps link-underline shrink-0 text-ink">
+            {hrefLabel}
+          </Link>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="text-center">
       {eyebrow && <p className="eyebrow mb-3 text-sage-700">{eyebrow}</p>}

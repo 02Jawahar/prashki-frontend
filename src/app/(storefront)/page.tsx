@@ -197,8 +197,8 @@ function Carousel({
 
   return (
     <section className="container-pk py-16 md:py-20">
-      <SectionHeading title={heading} href={href} />
-      <div className="mt-12">
+      <SectionHeading title={heading} href={href} hrefLabel="Shop all" align="split" />
+      <div className="mt-10">
         <ProductCarousel products={products} priorityCount={4} />
       </div>
     </section>

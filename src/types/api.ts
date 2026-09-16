@@ -249,6 +249,13 @@ export type HomeSection =
       type: 'video-grid'
       eyebrow: string
       heading: string
+      /**
+       * Repeated under the films as a caption with a link, the way the
+       * reference does it. The title over the video is atmosphere; this is the
+       * one a customer can act on.
+       */
+      captionLabel?: string
+      captionHref?: string
       items: Array<{ video: string; poster: string; label: string; href: string }>
     }
   | { type: 'newsletter'; heading: string; body: string }

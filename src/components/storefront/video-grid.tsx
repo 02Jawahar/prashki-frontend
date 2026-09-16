@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { HomeSection } from '@/types/api'
 
@@ -38,9 +39,20 @@ export function VideoGrid({ data }: { data: VideoGridData }) {
 
   return (
     <section className="relative w-full">
-      <div className="grid grid-cols-2 gap-0.5 md:grid-cols-4">
+      {/*
+        One film at a time on a phone, four across on a desktop.
+        
+        These are 9:16, so two side by side on a phone leaves each about the
+        width of a thumb — the garment, which is the entire point, becomes
+        unreadable. The reference gives its hero the full width on mobile; this
+        does the same and lets the other three be swiped to, with snap points so
+        a swipe lands on a film rather than between two.
+      */}
+      <div className="flex snap-x snap-mandatory gap-0.5 overflow-x-auto md:grid md:grid-cols-4 md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {data.items.map((item, index) => (
-          <Tile key={`${item.label}-${index}`} item={item} reducedMotion={reducedMotion} priority={index < 2} />
+          <div key={`${item.label}-${index}`} className="w-[88%] shrink-0 snap-center md:w-auto">
+            <Tile item={item} reducedMotion={reducedMotion} priority={index < 2} />
+          </div>
         ))}
       </div>
 
@@ -60,6 +72,25 @@ export function VideoGrid({ data }: { data: VideoGridData }) {
             <h1 className="display text-4xl text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.55)] md:text-6xl">
               {data.heading}
             </h1>
+          )}
+        </div>
+      )}
+
+      {/*
+        The name again, under the films, with somewhere to go. The title laid
+        over the video is atmosphere — it carries no link because a click on a
+        film should not navigate. This is the line a customer can act on.
+      */}
+      {data.heading && (
+        <div className="container-pk py-10 text-center md:py-14">
+          <p className="display text-[1.6rem] md:text-[2rem]">{data.heading}</p>
+          {data.captionHref && (
+            <Link
+              href={data.captionHref}
+              className="label-caps link-underline mt-3 inline-block text-ink"
+            >
+              {data.captionLabel || 'Shop now'}
+            </Link>
           )}
         </div>
       )}
