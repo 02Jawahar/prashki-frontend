@@ -28,21 +28,7 @@ export function SiteFooter({ nav, settings }: { nav: NavItem[]; settings: StoreS
       </div>
 
       <div className="container-pk py-16">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            {/* Full lockup here — there is room for the tagline to be legible. */}
-            <Image
-              src="/brand/logo-sage.png"
-              alt={storeName}
-              width={2128}
-              height={1063}
-              className="h-16 w-auto"
-            />
-            <p className="mt-5 max-w-xs text-[0.85rem] text-ink-soft">
-              Hand-finished pieces, cut to order in our studio.
-            </p>
-          </div>
-
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           <FooterColumn heading="Shop" links={shopLinks.map((l) => ({ href: l.href, label: l.label }))} />
 
           <FooterColumn
@@ -92,7 +78,34 @@ export function SiteFooter({ nav, settings }: { nav: NavItem[]; settings: StoreS
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-rule pt-7 text-[0.75rem] text-ink-soft md:flex-row">
+        {/*
+          The mark, centred and large, after the links rather than beside them —
+          the reference closes its footer this way and it reads as a signature on
+          the page rather than as a fourth column of navigation.
+
+          Not a link. It sits directly above the copyright line, where nobody is
+          looking for a way home, and the header already carries a clickable one.
+        */}
+        <div className="mt-16 flex flex-col items-center text-center md:mt-20">
+          <Image
+            src="/brand/logo-sage.png"
+            alt={storeName}
+            width={2128}
+            height={1063}
+            className="h-24 w-auto md:h-32"
+          />
+          <p className="mt-5 max-w-xs text-[0.85rem] text-ink-soft">
+            Hand-finished pieces, cut to order in our studio.
+          </p>
+        </div>
+
+        {/*
+          One centred line under the mark, the way the reference closes. The
+          policy links sit beneath it rather than opposite it: a row with the
+          copyright pushed to one edge and links to the other leaves a gap in
+          the middle that reads as something failed to load.
+        */}
+        <div className="mt-10 flex flex-col items-center gap-3 border-t border-rule pt-7 text-center text-[0.75rem] text-ink-soft">
           <p>
             &copy; {new Date().getFullYear()} {storeName}. All rights reserved.
           </p>
@@ -109,8 +122,6 @@ export function SiteFooter({ nav, settings }: { nav: NavItem[]; settings: StoreS
               </li>
             ))}
           </ul>
-
-          <p className="eyebrow text-[0.6rem] text-sage-700">Made to order</p>
         </div>
       </div>
     </footer>

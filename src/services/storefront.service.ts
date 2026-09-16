@@ -237,6 +237,12 @@ export interface GiftCardOptions {
   denominations: number[]
   custom: { min: number; max: number }
   currency: string
+  validForYears: number
+  /** Page copy, edited in admin. The page renders what it is given. */
+  heading: string
+  intro: string
+  /** Validity first, generated server-side, then whatever the store added. */
+  terms: string[]
 }
 
 export interface GiftCardBalance {

@@ -9,6 +9,7 @@ import {
   type AdminGiftCard,
   type GiftCardStatus,
 } from '@/services/admin-modules.service'
+import { GiftCardPageEditor } from '@/components/admin/gift-card-page-editor'
 import { ApiRequestError } from '@/services/api-client'
 import { formatPrice } from '@/lib/money'
 import { formatDate } from '@/lib/utils'
@@ -38,6 +39,15 @@ const STATUSES: GiftCardStatus[] = ['PENDING', 'ACTIVE', 'REDEEMED', 'EXPIRED', 
 export default function AdminGiftCardsPage() {
   const { can } = useAuth()
   const canIssue = can('refund.create')
+  const canReadPage = can('settings.read')
+  const canEditPage = can('settings.update')
+
+  /**
+   * Two jobs on one screen: the cards that exist, and what the storefront page
+   * offers. They are different enough to warrant tabs rather than one long
+   * scroll — nobody editing the page copy is also reading a ledger.
+   */
+  const [tab, setTab] = useState<'cards' | 'page'>('cards')
 
   const [cards, setCards] = useState<AdminGiftCard[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,6 +115,30 @@ export default function AdminGiftCardsPage() {
         )}
       </header>
 
+      {canReadPage && (
+        <div className="mb-6 flex gap-6 border-b border-rule">
+          {([
+            ['cards', 'Cards'],
+            ['page', 'Storefront page'],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={`-mb-px border-b-2 pb-3 text-sm transition-colors ${
+                tab === key ? 'border-sage-700 text-ink' : 'border-transparent text-ink-soft hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {canReadPage && tab === 'page' ? (
+        <GiftCardPageEditor canEdit={canEditPage} />
+      ) : (
+      <>
       {error && <Alert>{error}</Alert>}
       {notice && <Alert tone="info">{notice}</Alert>}
 
@@ -211,6 +245,8 @@ export default function AdminGiftCardsPage() {
           onConfirm={cancel}
           onCancel={() => setCancelling(null)}
         />
+      )}
+      </>
       )}
     </div>
   )

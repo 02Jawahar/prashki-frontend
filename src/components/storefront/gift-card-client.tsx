@@ -15,6 +15,10 @@ import { Alert, Button, Field, Input, Textarea } from '@/components/ui'
  * The amounts come from the server rather than this file. A price the browser
  * chooses is a price the customer can choose, and a gift card is the one thing
  * on the site where that would hand out money.
+ *
+ * The words come from the same place, for a duller reason: the store changes
+ * what it offers more often than anyone wants to ship a deploy, and copy that
+ * describes the amounts has to be able to change with them.
  */
 export function GiftCardClient() {
   const { user } = useAuth()
@@ -102,11 +106,10 @@ export function GiftCardClient() {
   return (
     <div className="grid gap-12 lg:grid-cols-2">
       <section>
-        <h1 className="display text-3xl">Gift card</h1>
-        <p className="mt-3 max-w-lg text-sm leading-relaxed text-ink-soft">
-          Let them choose. Pick a value, write a note, and we will send the card by email once your
-          order is paid for. It can be spent on anything in the shop, and is valid for three years.
-        </p>
+        <h1 className="display text-3xl">{options?.heading ?? 'Gift card'}</h1>
+        {options && (
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-ink-soft">{options.intro}</p>
+        )}
 
         {error && (
           <div className="mt-5">
@@ -224,9 +227,12 @@ export function GiftCardClient() {
           >
             {user ? 'Continue to payment' : 'Sign in to continue'}
           </Button>
-          <p className="mt-3 text-xs text-ink-soft">
-            The card is sent by email once your order is paid for, and is valid for three years.
-          </p>
+          {options && (
+            <p className="mt-3 text-xs text-ink-soft">
+              The card is sent by email once your order is paid for, and is valid for{' '}
+              {options.validForYears === 1 ? 'one year' : `${options.validForYears} years`}.
+            </p>
+          )}
         </div>
       </section>
 
@@ -272,10 +278,9 @@ export function GiftCardClient() {
         <div className="mt-10 border-t border-rule pt-6 text-xs leading-relaxed text-ink-soft">
           <p className="label-caps mb-2 text-ink">Good to know</p>
           <ul className="space-y-1.5">
-            <li>Valid for three years from the day it is issued.</li>
-            <li>Can be spent across several orders until the balance runs out.</li>
-            <li>If an order paid with a card is cancelled, the balance goes back on the card.</li>
-            <li>Not exchangeable for cash.</li>
+            {(options?.terms ?? []).map((term) => (
+              <li key={term}>{term}</li>
+            ))}
           </ul>
         </div>
       </section>

@@ -223,6 +223,16 @@ export interface AdminGiftCard {
   }>
 }
 
+/** What the storefront gift card page offers and says. */
+export interface GiftCardPageConfig {
+  denominations: number[]
+  custom: { min: number; max: number }
+  validForYears: number
+  heading: string
+  intro: string
+  terms: string[]
+}
+
 export const giftCardAdminService = {
   list: (query: { q?: string; status?: string; page?: number } = {}) =>
     apiClient
@@ -244,6 +254,16 @@ export const giftCardAdminService = {
     apiClient
       .post<{ giftCard: AdminGiftCard }>('/admin/gift-cards', input)
       .then((r) => r.data.giftCard),
+
+  config: () =>
+    apiClient
+      .get<{ config: GiftCardPageConfig }>('/admin/gift-cards/config/page')
+      .then((r) => r.data.config),
+
+  saveConfig: (config: GiftCardPageConfig) =>
+    apiClient
+      .put<{ config: GiftCardPageConfig }>('/admin/gift-cards/config/page', config)
+      .then((r) => r.data.config),
 
   /** Cancels rather than deletes — the ledger still has to add up. */
   cancel: (id: string, note?: string) =>
