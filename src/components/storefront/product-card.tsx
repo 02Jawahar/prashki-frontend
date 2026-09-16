@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/money'
 import { WishlistButton } from './wishlist-button'
+import { QuickAdd } from './quick-add'
 import type { ProductListItem } from '@/types/api'
 
 /**
@@ -68,6 +69,18 @@ export function ProductCard({
           productName={product.name}
           variant="icon"
           className="absolute right-2 top-2 opacity-100 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+        />
+
+        {/*
+          Add to bag without opening the piece. Sits over the foot of the photo
+          rather than under the price, so the card keeps its proportions whether
+          the control is showing or not.
+        */}
+        <QuickAdd
+          productId={product.id}
+          productSlug={product.slug}
+          productName={product.name}
+          inStock={product.inStock}
         />
       </div>
 

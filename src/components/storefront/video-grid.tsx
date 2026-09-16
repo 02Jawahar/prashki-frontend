@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { HomeSection } from '@/types/api'
 
@@ -102,17 +101,23 @@ function Tile({
     if (wanted) videoRef.current?.play().catch(() => undefined)
   }, [wanted])
 
+  /*
+   * A div, not a link. These films are the top of the page and a stray click
+   * while watching one should not navigate away — the reference behaves the
+   * same way. They are still focusable so a keyboard can start them, but they
+   * go nowhere.
+   */
   return (
-    <Link
-      href={item.href || '/products'}
+    <div
       className="group relative block aspect-[9/16] overflow-hidden bg-sage-100"
       onMouseEnter={play}
       onMouseLeave={stop}
       onFocus={play}
       onBlur={stop}
-      // Touch has no hover. A tap starts the film; the link still works on the
-      // second tap, which is the behaviour people expect from a video tile.
+      // Touch has no hover, so a tap is what starts the film.
       onTouchStart={play}
+      tabIndex={0}
+      role="img"
       aria-label={item.label}
     >
       <Image
@@ -143,6 +148,6 @@ function Tile({
           {item.label}
         </span>
       )}
-    </Link>
+    </div>
   )
 }

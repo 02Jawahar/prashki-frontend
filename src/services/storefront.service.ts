@@ -304,6 +304,17 @@ export interface Collection {
   seoDescription: string | null
   publishedAt: string | null
   productCount?: number
+  /**
+   * The ranges this collection actually contains, each with a photo — the
+   * category's own image if one is set, otherwise a piece from that range.
+   */
+  categories?: Array<{
+    id: string
+    name: string
+    slug: string
+    image: string | null
+    count: number
+  }>
 }
 
 export const collectionService = {

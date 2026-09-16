@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Heart, Menu, Search, ShoppingBag, User, X, ChevronDown } from 'lucide-react'
 import { SearchOverlay } from './search-overlay'
@@ -130,6 +131,21 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [hovered, setHovered] = useState(false)
+
+  /**
+   * The homepage opens on full-bleed film, so the bar sits over it rather than
+   * pushing it down — the reference does the same, and a white strip above the
+   * films cuts the one image the page is built around.
+   *
+   * Only the homepage: every other page starts with a heading on white, where a
+   * transparent bar would be invisible text on white.
+   */
+  const pathname = usePathname()
+  /** Whether the bar floats over the page at all. A property of the page. */
+  const homeOverlay = pathname === '/'
+  /** Whether it is currently see-through. A property of the moment. */
+  const overHero = homeOverlay && !scrolled && !hovered && !openGroup
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -140,24 +156,58 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
 
   return (
     <>
-      <div className="bg-sage-700 py-2 text-center text-white">
-        <p className="label-caps text-[0.66rem]">
-          Complimentary shipping across India &middot; Made to order in 15&ndash;20 days
-        </p>
-      </div>
+      {/*
+        On the homepage the whole top block floats over the films; everywhere
+        else it sits above the page as usual.
+        
+        It is fixed on the homepage whether or not it is currently transparent —
+        if it moved between fixed and flowed as the colour changed, hovering the
+        bar would shove the page down by its own height. Hover changes paint
+        only.
+      */}
+      <div className={homeOverlay ? 'fixed inset-x-0 top-0 z-50' : ''}>
+        <div
+          className={`py-2 text-center transition-colors duration-300 ${
+            overHero ? 'bg-transparent text-white' : 'bg-sage-700 text-white'
+          }`}
+        >
+          <p className="label-caps text-[0.66rem]">
+            Complimentary shipping across India &middot; Made to order in 15&ndash;20 days
+          </p>
+        </div>
 
       <header
-        className={`sticky top-0 z-50 border-b bg-white transition-shadow ${
-          scrolled ? 'border-hairline shadow-[0_1px_12px_rgba(33,33,33,0.05)]' : 'border-transparent'
+        className={`${homeOverlay ? '' : 'sticky top-0'} z-50 border-b transition-[background-color,color,box-shadow] duration-300 ${
+          overHero ? 'border-transparent bg-transparent text-white' : 'bg-white text-ink'
+        } ${
+          scrolled && !overHero
+            ? 'border-hairline shadow-[0_1px_12px_rgba(33,33,33,0.05)]'
+            : 'border-transparent'
         }`}
-        onMouseLeave={() => setOpenGroup(null)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => {
+          setHovered(false)
+          setOpenGroup(null)
+        }}
       >
-        <div className="container-pk">
+        {/*
+          A soft wash behind the bar while it is over the film.
+          
+          Without it the nav is white text on whatever frame happens to be
+          there, and two of these reels open on near-white studio walls — the
+          links simply vanish. Dark enough to carry the text, shallow enough
+          that it reads as shading on the image rather than a band across it.
+        */}
+        {overHero && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-ink/45 via-ink/20 to-transparent" />
+        )}
+
+        <div className="container-pk relative">
           <div className="flex items-center justify-between gap-4 py-4">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
-              className="lg:hidden"
+              className={`lg:hidden transition-colors ${overHero ? 'text-white' : 'text-ink'}`}
               aria-label="Open menu"
             >
               <Menu className="size-5" strokeWidth={1.4} />
@@ -168,7 +218,9 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
                 <div key={item.label} onMouseEnter={() => setOpenGroup(item.label)}>
                   <Link
                     href={item.href}
-                    className="label-caps flex items-center gap-1 whitespace-nowrap py-2 text-ink transition-colors hover:text-sage-700"
+                    className={`label-caps flex items-center gap-1 whitespace-nowrap py-2 transition-colors ${
+                      overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
+                    }`}
                   >
                     {item.label}
                     {item.children?.length ? <ChevronDown className="size-3" strokeWidth={1.6} /> : null}
@@ -189,41 +241,73 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
                 width={2120}
                 height={363}
                 priority
-                className="h-6 w-auto md:h-7"
+                className={`h-6 w-auto transition-[filter] duration-300 md:h-7 ${
+                  // The wordmark is dark ink on transparent, which vanishes
+                  // against a photograph. Inverting is cheaper than shipping a
+                  // second file and cannot drift out of sync with the first.
+                  overHero ? 'brightness-0 invert' : ''
+                }`}
               />
             </Link>
 
-            <div className="flex items-center gap-4 lg:order-3 lg:flex-1 lg:justify-end lg:gap-5">
-              <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search">
-                <Search className="size-5" strokeWidth={1.4} />
+            {/*
+              Words rather than bare icons, which is what the reference does and
+              what a first-time visitor can actually read: a magnifier and a bag
+              are learnable, but "Customer Care" and "Bag" need no learning at
+              all. The icons stay on narrow screens, where there is no room for
+              the labels.
+            */}
+            <div className="flex items-center gap-4 lg:order-3 lg:flex-1 lg:justify-end lg:gap-6">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Search"
+                className={`label-caps flex items-center gap-1.5 transition-colors ${
+                  overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
+                }`}
+              >
+                <Search className="size-4" strokeWidth={1.5} />
+                <span className="hidden lg:inline">Search</span>
               </button>
 
               <NotificationBell />
 
               {/*
-                Saved pieces. Shown only when signed in, because the wishlist
-                lives on the account — offering it to a guest leads to a login
-                wall reached by pressing a heart, which reads as being refused
-                rather than being asked to sign in.
+                Saved pieces, shown to everyone. A guest who presses it lands on
+                sign-in, which is the ordinary way into an account — hiding it
+                until they are signed in means the one feature that gives them a
+                reason to make an account is invisible until they have one.
               */}
-              {user && (
-                <Link href="/account/wishlist" aria-label="Saved pieces" className="hidden sm:block">
-                  <Heart className="size-5" strokeWidth={1.4} />
-                </Link>
-              )}
+              <Link
+                href={user ? '/account/wishlist' : '/login?next=/account/wishlist'}
+                aria-label="Saved pieces"
+                className={`transition-colors ${overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'}`}
+              >
+                <Heart className="size-5" strokeWidth={1.4} />
+              </Link>
 
               <Link
                 href={user ? '/account' : '/login'}
                 aria-label={user ? 'Your account' : 'Sign in'}
-                className="hidden sm:block"
+                className={`hidden transition-colors sm:block ${
+                  overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
+                }`}
               >
                 <User className="size-5" strokeWidth={1.4} />
               </Link>
 
-              <button type="button" onClick={openCart} className="relative" aria-label={`Bag, ${itemCount} items`}>
-                <ShoppingBag className="size-5" strokeWidth={1.4} />
+              <button
+                type="button"
+                onClick={openCart}
+                className={`label-caps relative flex items-center gap-1.5 transition-colors ${
+                  overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
+                }`}
+                aria-label={`Bag, ${itemCount} items`}
+              >
+                <ShoppingBag className="size-4 lg:hidden" strokeWidth={1.5} />
+                <span className="hidden lg:inline">Bag</span>
                 {itemCount > 0 && (
-                  <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-sage-700 text-[0.6rem] font-medium text-white">
+                  <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-sage-700 text-[0.6rem] font-medium text-white lg:-right-3">
                     {itemCount}
                   </span>
                 )}
@@ -245,6 +329,7 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
           ) : null,
         )}
       </header>
+      </div>
 
       <MobileMenu nav={nav} open={menuOpen} onClose={() => setMenuOpen(false)} signedIn={Boolean(user)} />
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />

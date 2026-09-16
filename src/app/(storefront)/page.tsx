@@ -7,6 +7,7 @@ import { SectionMedia } from '@/components/storefront/section-media'
 import { NewsletterForm } from '@/components/storefront/newsletter-form'
 import { ShowcaseWall } from '@/components/storefront/showcase-wall'
 import { VideoGrid } from '@/components/storefront/video-grid'
+import { ProductCarousel } from '@/components/storefront/product-carousel'
 import type { Category, HomeSection, ProductListItem, StoreSettings } from '@/types/api'
 
 export const metadata: Metadata = {
@@ -95,10 +96,10 @@ export default async function HomePage() {
             )
           case 'new-arrivals':
             return (
-              <Grid
+              <Carousel
                 key={i}
                 heading={section.heading}
-                products={newest.slice(0, section.limit)}
+                products={newest.slice(0, Math.max(section.limit, 8))}
                 href="/products?sort=newest"
               />
             )
@@ -171,6 +172,34 @@ function Services({ items }: { items: Array<{ title: string; body: string }> }) 
             <p className="mt-1.5 text-[0.8rem] text-ink-soft">{item.body}</p>
           </div>
         ))}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * New arrivals as a scrolling row rather than a fixed four.
+ *
+ * The section asks for more pieces than fit on screen on purpose — a carousel
+ * showing exactly what fits has nothing to scroll to, which is worse than a
+ * plain grid because it implies there is more.
+ */
+function Carousel({
+  heading,
+  products,
+  href,
+}: {
+  heading: string
+  products: ProductListItem[]
+  href: string
+}) {
+  if (products.length === 0) return null
+
+  return (
+    <section className="container-pk py-16 md:py-20">
+      <SectionHeading title={heading} href={href} />
+      <div className="mt-12">
+        <ProductCarousel products={products} priorityCount={4} />
       </div>
     </section>
   )
