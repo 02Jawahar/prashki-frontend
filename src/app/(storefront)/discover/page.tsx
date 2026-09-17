@@ -13,9 +13,14 @@ export const metadata: Metadata = {
  * The collections archive (M23).
  *
  * Each drop is a titled block — its name and year — with the ranges it contains
- * laid out beneath as photographs. Discover is a way into the clothes rather
- * than a list of collection names, so the pictures carry it and the range name
- * sits under each one, the way the reference sets it.
+ * laid out beneath as photographs, and nothing else. No page heading, no blurb,
+ * no caption under the tiles: Discover is a way into the clothes rather than a
+ * list of collection names, so the pictures carry it alone and the only words
+ * are the drop's own title.
+ *
+ * That leaves the range name reachable only on hover, which a touch device
+ * does not have. It is the image's alt text for that reason, and the tile is a
+ * link to the range either way.
  *
  * A collection whose pieces are all still drafts shows its title and nothing
  * else. That is a real state during a launch, and it should read as a
@@ -36,12 +41,7 @@ export default async function DiscoverPage() {
   }
 
   return (
-    <div className="container-pk py-12 md:py-16">
-      <header className="mb-12 text-center">
-        <h1 className="display text-3xl md:text-4xl">Discover</h1>
-        <p className="mt-2 text-sm text-ink-soft">The collections, newest first.</p>
-      </header>
-
+    <div className="container-pk py-16 md:py-20">
       {collections.length === 0 ? (
         <EmptyState
           title="No collections yet"
@@ -65,12 +65,6 @@ export default async function DiscoverPage() {
                       )}
                     </h2>
                   </Link>
-
-                  {collection.description && (
-                    <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-ink-soft">
-                      {collection.description}
-                    </p>
-                  )}
                 </div>
 
                 {ranges.length === 0 ? (
@@ -89,7 +83,7 @@ export default async function DiscoverPage() {
                             {range.image ? (
                               <Image
                                 src={range.image}
-                                alt=""
+                                alt={range.name}
                                 fill
                                 sizes="(max-width: 768px) 50vw, 25vw"
                                 className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
@@ -105,8 +99,9 @@ export default async function DiscoverPage() {
                               type on them is invisible without something behind
                               it.
 
-                              Hover only. The same words sit permanently under
-                              the tile, so a touch device loses nothing.
+                              Hover only, by request. The range name is the
+                              image's alt text so a screen reader still reaches
+                              it, and the tile links straight to that range.
                             */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/0 text-center opacity-0 transition-all duration-500 group-hover:bg-ink/40 group-hover:opacity-100 group-focus-visible:bg-ink/40 group-focus-visible:opacity-100">
                               <span className="display text-[1.35rem] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] md:text-[1.6rem]">
@@ -120,21 +115,6 @@ export default async function DiscoverPage() {
                               </span>
                             </div>
                           </div>
-
-                          {/*
-                            Under the tile, not over it. A name laid over a
-                            photograph has to survive whatever that photograph
-                            turns out to be, and these are studio shots on white
-                            where light text disappears entirely.
-                          */}
-                          <p className="mt-3 text-center">
-                            <span className="display text-[1.05rem] transition-colors group-hover:text-sage-700">
-                              {range.name}
-                            </span>
-                            <span className="mt-0.5 block text-xs text-ink-soft">
-                              {range.count} piece{range.count === 1 ? '' : 's'}
-                            </span>
-                          </p>
                         </Link>
                       </li>
                     ))}

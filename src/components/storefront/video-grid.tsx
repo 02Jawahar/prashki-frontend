@@ -60,9 +60,14 @@ export function VideoGrid({ data }: { data: VideoGridData }) {
         The title sits over the row rather than above it, which is what the
         reference does and why the row reads as one image rather than four.
         `pointer-events-none` keeps it from swallowing the hover it covers.
+
+        Desktop only. On a phone the row is one full-width film you swipe
+        through, so a title centred over the whole strip lands on whichever
+        film happens to be under it — and the same words already sit below the
+        row with somewhere to go.
       */}
       {(data.eyebrow || data.heading) && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="pointer-events-none absolute inset-0 hidden flex-col items-center justify-center text-center md:flex">
           {data.eyebrow && (
             <p className="label-caps mb-2 text-[0.7rem] text-white/90 drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
               {data.eyebrow}
