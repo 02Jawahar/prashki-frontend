@@ -110,6 +110,15 @@ function Tile({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   /** Stays false until someone shows interest, so the file is never fetched. */
   const [wanted, setWanted] = useState(false)
+  /**
+   * Whether the video has actually painted a frame.
+   *
+   * This is what hides the poster — not the hover. These files are several
+   * megabytes, so between wanting one and seeing it there are seconds of
+   * buffering, and a poster hidden on hover leaves a white rectangle for all
+   * of it. The still stays put until there is something to replace it with.
+   */
+  const [painted, setPainted] = useState(false)
 
   const play = useCallback(() => {
     if (reducedMotion) return
@@ -126,6 +135,10 @@ function Tile({
     // Back to the first frame, so the tile matches its poster again rather
     // than freezing mid-gesture.
     video.currentTime = 0
+    // And back to the poster, so a row of tiles reads as one set of stills
+    // whether or not each has been hovered. The file is already buffered, so
+    // coming back costs nothing.
+    setPainted(false)
   }, [])
 
   useEffect(() => {
@@ -156,19 +169,26 @@ function Tile({
         alt={item.label}
         fill
         priority={priority}
-        sizes="(max-width: 768px) 50vw, 25vw"
-        className={`object-cover transition-opacity duration-500 ${wanted ? 'opacity-0' : 'opacity-100'}`}
+        sizes="(max-width: 768px) 88vw, 25vw"
+        className={`object-cover transition-opacity duration-500 ${painted ? 'opacity-0' : 'opacity-100'}`}
       />
 
       {wanted && !reducedMotion && (
         <video
           ref={videoRef}
           src={item.video}
-          poster={item.poster}
           muted
           loop
           playsInline
           preload="none"
+          // Painting is what the poster waits for. `playing` rather than
+          // `canplay`: canplay fires while the frame on screen may still be
+          // nothing.
+          onPlaying={() => setPainted(true)}
+          // A film that will not load leaves the still showing rather than a
+          // blank tile. Nothing on this page is worth a white rectangle.
+          onError={() => setPainted(false)}
+          onStalled={() => setPainted(false)}
           className="absolute inset-0 size-full object-cover"
           aria-hidden
         />
