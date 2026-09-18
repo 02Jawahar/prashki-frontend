@@ -116,12 +116,9 @@ function Tile({
     const video = videoRef.current
     if (!video) return
     video.pause()
-    // Back to the first frame, so the tile matches its poster again rather
-    // than freezing mid-gesture.
     video.currentTime = 0
-    // And back to the poster, so a row of tiles reads as one set of stills
-    // whether or not each has been hovered. The file is already buffered, so
-    // coming back costs nothing.
+    // Back to the poster — the exact still the tile had before anyone touched
+    // it. The file stays buffered, so hovering again resumes at once.
     setPainted(false)
   }, [])
 
@@ -173,7 +170,14 @@ function Tile({
           // blank tile. Nothing on this page is worth a white rectangle.
           onError={() => setPainted(false)}
           onStalled={() => setPainted(false)}
-          className="absolute inset-0 size-full object-cover"
+          // Hidden whenever the poster is showing. The element stays mounted
+          // so the file is not fetched twice, but it must not sit on top of
+          // the still — it is a paused first frame, and the poster is the
+          // chosen one. Without this, leaving the tile left the wrong picture
+          // behind no matter what the poster did.
+          className={`absolute inset-0 size-full object-cover transition-opacity duration-500 ${
+            painted ? 'opacity-100' : 'opacity-0'
+          }`}
           aria-hidden
         />
       )}

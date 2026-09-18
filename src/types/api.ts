@@ -269,7 +269,16 @@ export type HomeSection =
       items: Array<{ video: string; poster: string; label: string; href: string }>
     }
   | { type: 'newsletter'; heading: string; body: string }
-  | { type: 'showcase'; heading: string; body?: string; limit?: number }
+  | {
+      type: 'showcase'
+      heading: string
+      body?: string
+      limit?: number
+      /** Where the wall points — the brand's Instagram, usually. */
+      href?: string
+      /** What that link reads as, e.g. "@prashandki". */
+      linkLabel?: string
+    }
 
 /**
  * A customer photo or clip on the showcase wall.

@@ -32,10 +32,14 @@ export function ShowcaseWall({
   items,
   heading,
   body,
+  href,
+  linkLabel,
 }: {
   items: ShowcaseItem[]
   heading: string
   body?: string
+  href?: string
+  linkLabel?: string
 }) {
   const [playing, setPlaying] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
@@ -71,6 +75,22 @@ export function ShowcaseWall({
             {heading}
           </h2>
           {body && <p className="mx-auto mt-3 max-w-md text-[0.95rem] text-ink-soft">{body}</p>}
+
+          {/*
+            Where the wall actually leads. It is an outside address, so it
+            opens in its own tab and carries `noopener` — a page opened with
+            `target="_blank"` can otherwise reach back through `window.opener`.
+          */}
+          {href && (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer me"
+              className="label-caps link-underline mt-4 inline-block text-ink"
+            >
+              {linkLabel || 'Follow us'}
+            </a>
+          )}
 
           {hasVideo && !reducedMotion && (
             <button

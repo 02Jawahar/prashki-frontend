@@ -146,6 +146,8 @@ export default async function HomePage() {
                 items={showcase.slice(0, section.limit ?? 8)}
                 heading={section.heading}
                 body={section.body}
+                href={section.href}
+                linkLabel={section.linkLabel}
               />
             )
           case 'newsletter':

@@ -31,7 +31,7 @@ type Section =
       heading: string
       items: Array<{ video: string; poster: string; label: string; href: string }>
     }
-  | { type: 'showcase'; heading: string; body: string; limit: number }
+  | { type: 'showcase'; heading: string; body: string; limit: number; href?: string; linkLabel?: string }
   | { type: 'newsletter'; heading: string; body: string }
 
 const SECTION_LABELS: Record<Section['type'], string> = {
@@ -604,6 +604,29 @@ function SectionFields({
                 value={section.limit}
                 disabled={readOnly}
                 onChange={(e) => onChange({ limit: Number(e.target.value || 8) } as Partial<Section>)}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Link to"
+              htmlFor="href"
+              hint="An outside address, e.g. your Instagram. Opens in a new tab. Leave empty for no link."
+            >
+              <Input
+                value={section.href ?? ''}
+                disabled={readOnly}
+                placeholder="https://www.instagram.com/…"
+                onChange={(e) => onChange({ href: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+            <Field label="Link reads as" htmlFor="linkLabel" hint='Defaults to "Follow us".'>
+              <Input
+                value={section.linkLabel ?? ''}
+                disabled={readOnly}
+                placeholder="@prashandki"
+                onChange={(e) => onChange({ linkLabel: e.target.value } as Partial<Section>)}
               />
             </Field>
           </div>
