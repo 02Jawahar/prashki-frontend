@@ -22,7 +22,7 @@ type Section =
   | { type: 'hero'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'services'; items: Array<{ title: string; body: string }> }
   | { type: 'featured-products'; heading: string; limit: number }
-  | { type: 'new-arrivals'; heading: string; limit: number }
+  | { type: 'new-arrivals'; heading: string; limit: number; first?: string[] }
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'category-banner'; heading: string; slugs: string[] }
   | {
@@ -404,6 +404,30 @@ function SectionFields({
               onChange={(e) => onChange({ limit: Number(e.target.value) || 4 } as Partial<Section>)}
             />
           </Field>
+
+          {section.type === 'new-arrivals' && (
+            <div className="sm:col-span-2">
+              <Field
+                label="Show these first"
+                htmlFor="first"
+                hint="Product web addresses, comma separated — look-54, look-41. They lead the row in this order; the rest follows newest first. A piece listed here is not repeated below. Leave empty for newest first throughout."
+              >
+                <Input
+                  value={(section.first ?? []).join(', ')}
+                  disabled={readOnly}
+                  placeholder="look-54, look-41, look-11"
+                  onChange={(e) =>
+                    onChange({
+                      first: e.target.value
+                        .split(',')
+                        .map((slug) => slug.trim())
+                        .filter(Boolean),
+                    } as Partial<Section>)
+                  }
+                />
+              </Field>
+            </div>
+          )}
         </div>
       )
 

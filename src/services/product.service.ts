@@ -10,6 +10,8 @@ import type {
 export interface ProductQuery {
   q?: string
   category?: string
+  /** "look-54,look-41" — an explicit line-up, in place of a sort. */
+  slugs?: string
   minPrice?: number
   maxPrice?: number
   inStock?: boolean

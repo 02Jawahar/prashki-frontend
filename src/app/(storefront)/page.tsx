@@ -49,15 +49,44 @@ export default async function HomePage() {
   // wall is one request the homepage does not need to make.
   const wantsShowcase = sections.some((section) => section.type === 'showcase')
 
+  /**
+   * Pieces an editor has put at the front of new arrivals.
+   *
+   * Pinning rather than re-dating them: "newest" is a fact about when a piece
+   * was published, and editing that to win a slot on the homepage would also
+   * reorder the shop's own listing and lose the real date for good.
+   */
+  const pinned = sections.flatMap((section) =>
+    section.type === 'new-arrivals' ? (section.first ?? []) : [],
+  )
+
   // Resolve every list the page needs in one pass.
-  const [featured, newest, categories, showcase] = await Promise.all([
+  const [featured, newest, categories, showcase, pinnedProducts] = await Promise.all([
     productService.list({ sort: 'featured', perPage: 4 }).then((r) => r.data.products).catch(() => []),
     productService.list({ sort: 'newest', perPage: 8 }).then((r) => r.data.products).catch(() => []),
     productService.categories().then((r) => r.data.categories).catch(() => []),
     wantsShowcase
       ? productService.showcase(8).then((r) => r.data.items).catch(() => [])
       : Promise.resolve([]),
+    pinned.length > 0
+      ? productService
+          .list({ slugs: pinned.join(','), perPage: 12 })
+          .then((r) => r.data.products)
+          .catch(() => [])
+      : Promise.resolve([]),
   ])
+
+  /**
+   * The API returns pinned pieces in its own order, so the editor's order is
+   * restored here. A slug that no longer resolves — unpublished, renamed —
+   * simply drops out rather than leaving a gap.
+   */
+  const lead = pinned
+    .map((slug) => pinnedProducts.find((product) => product.slug === slug))
+    .filter((product) => product !== undefined)
+
+  const leadIds = new Set(lead.map((product) => product.id))
+  const arrivals = [...lead, ...newest.filter((product) => !leadIds.has(product.id))]
 
   /**
    * With no sections, no products and no categories there is genuinely nothing
@@ -99,7 +128,7 @@ export default async function HomePage() {
               <Carousel
                 key={i}
                 heading={section.heading}
-                products={newest.slice(0, Math.max(section.limit, 8))}
+                products={arrivals.slice(0, Math.max(section.limit, 8))}
                 href="/products?sort=newest"
               />
             )

@@ -234,7 +234,17 @@ export type HomeSection =
   | { type: 'hero'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'services'; items: Array<{ title: string; body: string }> }
   | { type: 'featured-products'; heading: string; limit: number }
-  | { type: 'new-arrivals'; heading: string; limit: number }
+  | {
+      type: 'new-arrivals'
+      heading: string
+      limit: number
+      /**
+       * Slugs to show first, in this order. Everything after them is the
+       * newest-first list with these removed, so pinning a piece moves it
+       * rather than showing it twice.
+       */
+      first?: string[]
+    }
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'category-banner'; heading: string; slugs: string[] }
   /**
