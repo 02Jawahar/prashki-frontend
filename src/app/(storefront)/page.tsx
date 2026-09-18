@@ -128,7 +128,10 @@ export default async function HomePage() {
               <Carousel
                 key={i}
                 heading={section.heading}
-                products={arrivals.slice(0, Math.max(section.limit, 8))}
+                // The editor's number, honoured. It used to be floored at
+                // eight so the row was always worth scrolling, which quietly
+                // overrode anyone who asked for fewer.
+                products={arrivals.slice(0, section.limit)}
                 href="/products?sort=newest"
               />
             )
