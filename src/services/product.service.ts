@@ -12,6 +12,8 @@ export interface ProductQuery {
   category?: string
   /** "look-54,look-41" — an explicit line-up, in place of a sort. */
   slugs?: string
+  /** Several categories at once, for a garment type that spans the ranges. */
+  categories?: string
   minPrice?: number
   maxPrice?: number
   inStock?: boolean

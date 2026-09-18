@@ -42,10 +42,37 @@ export default async function ProductsPage({
   const products = listing?.data.products ?? null
   const pagination = listing?.pagination
 
+  /**
+   * What the customer actually asked for, named.
+   *
+   * "Shop all" over a filtered grid is a small lie, and the one that made a
+   * broken filter hard to spot: the page said Shop all and showed everything,
+   * which is exactly what it says when nothing is filtered.
+   *
+   * Several categories that share a name — Skirt Co-ord exists under three
+   * ranges — collapse to that name rather than listing it three times.
+   */
+  const named = [
+    ...(query.category ? [query.category] : []),
+    ...(query.categories ? query.categories.split(',') : []),
+  ]
+  const flat = categories.flatMap((c) => [c, ...(c.children ?? [])])
+  const names = [...new Set(named.map((slug) => flat.find((c) => c.slug === slug)?.name).filter(Boolean))]
+  /**
+   * Long Dresses and Short Dresses are both dresses, and the link that asks
+   * for both is called Dresses. When every name ends in the same word, that
+   * word is the heading — otherwise they are joined.
+   */
+  const lastWords = names.map((n) => n!.split(' ').pop())
+  const shared = names.length > 1 && new Set(lastWords).size === 1 ? lastWords[0]! : null
+
+  const heading =
+    shared ?? (names.length > 0 ? names.join(' & ') : query.q ? `“${query.q}”` : 'Shop all')
+
   return (
     <div className="container-pk py-10 md:py-14">
       <header className="mb-8 text-center">
-        <h1 className="display text-[2.2rem] md:text-[2.8rem]">Shop all</h1>
+        <h1 className="display text-[2.2rem] md:text-[2.8rem]">{heading}</h1>
         <div className="rule-dot mt-4" aria-hidden />
       </header>
 

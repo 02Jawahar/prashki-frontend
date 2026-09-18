@@ -44,11 +44,25 @@ export function toProductQuery(sp: SearchParams, overrides: Partial<ProductQuery
     .filter((pair) => /^[a-z0-9-]+:[a-z0-9-]+$/.test(pair))
     .join(',')
 
+  /**
+   * Several categories at once: "casuals-skirt-coord,pret-skirt-coord". A
+   * garment type spans the ranges, so the menu links ask for a list. Dropped
+   * here means the page quietly returns everything, which is how this was
+   * found — a "Pant Co-ord" link showing all 63 pieces.
+   */
+  const categories = one('categories')
+    ?.split(',')
+    .map((slug) => slug.trim().toLowerCase())
+    .filter((slug) => /^[a-z0-9-]+$/.test(slug))
+    .slice(0, 16)
+    .join(',')
+
   const rating = num('minRating')
 
   return {
     q: one('q'),
     category: one('category'),
+    categories: categories || undefined,
     sort: (sort && SORTS.has(sort) ? sort : 'featured') as ProductQuery['sort'],
     minPrice: num('minPrice'),
     maxPrice: num('maxPrice'),
