@@ -38,7 +38,7 @@ export function VideoGrid({ data }: { data: VideoGridData }) {
   if (data.items.length === 0) return null
 
   return (
-    <section className="relative w-full">
+    <section className="w-full">
       {/*
         One film at a time on a phone, four across on a desktop.
         
@@ -57,34 +57,13 @@ export function VideoGrid({ data }: { data: VideoGridData }) {
       </div>
 
       {/*
-        The title sits over the row rather than above it, which is what the
-        reference does and why the row reads as one image rather than four.
-        `pointer-events-none` keeps it from swallowing the hover it covers.
-
-        Desktop only. On a phone the row is one full-width film you swipe
-        through, so a title centred over the whole strip lands on whichever
-        film happens to be under it — and the same words already sit below the
-        row with somewhere to go.
-      */}
-      {(data.eyebrow || data.heading) && (
-        <div className="pointer-events-none absolute inset-0 hidden flex-col items-center justify-center text-center md:flex">
-          {data.eyebrow && (
-            <p className="label-caps mb-2 text-[0.7rem] text-white/90 drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)]">
-              {data.eyebrow}
-            </p>
-          )}
-          {data.heading && (
-            <h1 className="display text-4xl text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.55)] md:text-6xl">
-              {data.heading}
-            </h1>
-          )}
-        </div>
-      )}
-
-      {/*
-        The name again, under the films, with somewhere to go. The title laid
-        over the video is atmosphere — it carries no link because a click on a
-        film should not navigate. This is the line a customer can act on.
+        The name sits below the films, not across them.
+        
+        It used to be laid over the row, which is what the reference does — but
+        these are studio shots on near-white, and type over them fought the
+        clothes for every pixel it covered. Below, it also gets somewhere to
+        go: a click on a film should not navigate, so this is the only line on
+        the row a customer can act on.
       */}
       {data.heading && (
         <div className="container-pk py-10 text-center md:py-14">
