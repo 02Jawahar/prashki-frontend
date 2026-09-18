@@ -265,11 +265,13 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
             </Link>
 
             {/*
-              Words rather than bare icons, which is what the reference does and
-              what a first-time visitor can actually read: a magnifier and a bag
-              are learnable, but "Customer Care" and "Bag" need no learning at
-              all. The icons stay on narrow screens, where there is no room for
-              the labels.
+              Search keeps its word on wide screens; the rest are icons at
+              every width, sitting together as one set. The bag is the one
+              people look for by shape rather than by name, and a lone word
+              among three glyphs read as a stray link.
+
+              Every one of them carries an aria-label, so "bag" is still what a
+              screen reader announces.
             */}
             <div className="flex items-center gap-4 lg:order-3 lg:flex-1 lg:justify-end lg:gap-6">
               <button
@@ -317,15 +319,14 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
               <button
                 type="button"
                 onClick={openCart}
-                className={`label-caps relative flex items-center gap-1.5 transition-colors ${
+                className={`relative transition-colors ${
                   overHero ? 'text-white hover:text-white/75' : 'text-ink hover:text-sage-700'
                 }`}
                 aria-label={`Bag, ${itemCount} items`}
               >
-                <ShoppingBag className="size-5 lg:hidden" strokeWidth={1.4} />
-                <span className="hidden lg:inline">Bag</span>
+                <ShoppingBag className="size-5" strokeWidth={1.4} />
                 {itemCount > 0 && (
-                  <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-sage-700 text-[0.6rem] font-medium text-white lg:-right-3">
+                  <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-sage-700 text-[0.6rem] font-medium text-white">
                     {itemCount}
                   </span>
                 )}
