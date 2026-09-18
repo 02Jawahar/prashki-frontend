@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pause, Play, Volume2, VolumeX, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Volume2, VolumeX, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatPrice } from '@/lib/money'
 import type { ShowcaseItem } from '@/types/api'
 
@@ -22,11 +22,12 @@ import type { ShowcaseItem } from '@/types/api'
  *      without `playsInline` iOS hijacks the video to fullscreen. Both are
  *      non-negotiable, so sound is opt-in and lives in the lightbox.
  *
- *   3. **WCAG 2.2.2 (Pause, Stop, Hide).** Anything that moves for more than
- *      five seconds needs a way to stop it. There is a single control for the
- *      whole row, and `prefers-reduced-motion` means nothing moves at all
- *      until asked — the poster stands in, which is what the still frame is
- *      for anyway.
+ *   3. **Motion.** `prefers-reduced-motion` stops the row entirely — the
+ *      posters stand in, which is what the stills are for anyway. Note that
+ *      the visible pause control was removed by request: WCAG 2.2.2 asks for
+ *      a way to stop anything moving for more than five seconds, and the
+ *      system preference is now the only thing that does it. A tile that
+ *      scrolls out of view still pauses.
  */
 export function ShowcaseWall({
   items,
@@ -41,17 +42,13 @@ export function ShowcaseWall({
   href?: string
   linkLabel?: string
 }) {
-  const [playing, setPlaying] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [open, setOpen] = useState<number | null>(null)
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const apply = () => {
-      setReducedMotion(query.matches)
-      // Someone who asked for less motion should not have to press pause.
-      if (query.matches) setPlaying(false)
-    }
+    // Someone who asked their system for less motion gets stills, not film.
+    const apply = () => setReducedMotion(query.matches)
     apply()
     query.addEventListener('change', apply)
     return () => query.removeEventListener('change', apply)
@@ -59,55 +56,38 @@ export function ShowcaseWall({
 
   if (items.length === 0) return null
 
-  const hasVideo = items.some((item) => item.mediaType === 'VIDEO')
-
   return (
     <section className="py-16 md:py-20" aria-labelledby="showcase-heading">
       <div className="container-pk">
         {/*
-          Centred over the wall, the way the reference sets it. The pause
-          control sits under the heading rather than beside it — floated right
-          of a centred title it reads as belonging to the title, and on a narrow
-          screen it would push the title off centre.
+          The name and the handle on one line, the way the reference sets it.
+          The link lives inside the heading rather than under it: "Follow us"
+          on its own is an instruction with no object, and a handle on its own
+          line reads as a separate thing to do.
         */}
         <div className="text-center">
           <h2 id="showcase-heading" className="display text-[2rem] md:text-[2.6rem]">
             {heading}
+            {href && (
+              <>
+                {' '}
+                {/*
+                  An outside address, so it opens in its own tab and carries
+                  `noopener` — a page opened with target="_blank" can otherwise
+                  reach back through window.opener.
+                */}
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer me"
+                  className="link-underline text-[0.8em] align-baseline transition-colors hover:text-sage-700"
+                >
+                  {linkLabel || '@'}
+                </a>
+              </>
+            )}
           </h2>
           {body && <p className="mx-auto mt-3 max-w-md text-[0.95rem] text-ink-soft">{body}</p>}
-
-          {/*
-            Where the wall actually leads. It is an outside address, so it
-            opens in its own tab and carries `noopener` — a page opened with
-            `target="_blank"` can otherwise reach back through `window.opener`.
-          */}
-          {href && (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer me"
-              className="label-caps link-underline mt-4 inline-block text-ink"
-            >
-              {linkLabel || 'Follow us'}
-            </a>
-          )}
-
-          {hasVideo && !reducedMotion && (
-            <button
-              type="button"
-              onClick={() => setPlaying((current) => !current)}
-              className="label-caps mt-4 border border-rule px-3.5 py-2 text-xs transition-colors hover:bg-sage-50"
-              // The label states what pressing it does, not what is happening.
-              aria-label={playing ? 'Pause the showcase videos' : 'Play the showcase videos'}
-            >
-              {playing ? (
-                <Pause className="mr-1.5 inline size-3" strokeWidth={2} />
-              ) : (
-                <Play className="mr-1.5 inline size-3" strokeWidth={2} />
-              )}
-              {playing ? 'Pause' : 'Play'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -123,7 +103,7 @@ export function ShowcaseWall({
           >
             <ShowcaseTile
               item={item}
-              playing={playing && !reducedMotion}
+              playing={!reducedMotion}
               onOpen={() => setOpen(index)}
             />
           </li>
