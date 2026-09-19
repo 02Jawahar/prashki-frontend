@@ -45,34 +45,84 @@ function secondsLeft(token: string | undefined): number {
  * session and bounced to the sign-in page, with a perfectly good refresh
  * token sitting in the jar.
  *
- * Here, at the edge, cookies can still be set. The new pair is put on the
- * response so the rendered page and every later request both see it.
+ * Here, at the edge, cookies can still be set — and, more importantly, the
+ * cookie the render is about to read can be swapped for the fresh one.
  */
 async function renewAdminSession(request: NextRequest): Promise<NextResponse> {
-  const response = NextResponse.next()
-
   const refreshToken = request.cookies.get('rt')?.value
-  if (!refreshToken) return response
+  if (!refreshToken) return NextResponse.next()
 
   // A little early, so a request that takes a moment does not arrive expired.
-  if (secondsLeft(request.cookies.get('at')?.value) > 60) return response
+  if (secondsLeft(request.cookies.get('at')?.value) > 60) return NextResponse.next()
+
+  const cookieHeader = request.headers.get('cookie') ?? ''
 
   try {
+    /**
+     * The CSRF token goes in the header as well as the cookie.
+     *
+     * `/auth/refresh` is a POST and the API guards it with a signed
+     * double-submit: the `csrf` cookie has to be echoed back in
+     * `x-csrf-token`, and a request carrying only the cookie is rejected
+     * exactly like a forged one. Forwarding the cookie header alone got a 401
+     * on every renewal — so the refresh never happened, and the ten-minute
+     * bounce this function exists to prevent went on happening.
+     */
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
-      headers: { cookie: request.headers.get('cookie') ?? '' },
+      headers: {
+        cookie: cookieHeader,
+        'x-csrf-token': request.cookies.get('csrf')?.value ?? '',
+      },
     })
-    if (!res.ok) return response
+    if (!res.ok) return NextResponse.next()
 
-    for (const cookie of res.headers.getSetCookie?.() ?? []) {
-      response.headers.append('set-cookie', cookie)
-    }
+    const issued = res.headers.getSetCookie?.() ?? []
+    if (issued.length === 0) return NextResponse.next()
+
+    /**
+     * Hand the render the new cookies, not just the browser.
+     *
+     * `NextResponse.next()` passes the original request through untouched, so
+     * setting `set-cookie` on the response updates the jar for *next* time
+     * while this page still renders against the expired token — asks the API
+     * who the user is, gets a 401, and redirects to the sign-in screen it was
+     * just saved from. The request headers have to be rewritten too.
+     */
+    const merged = mergeCookies(cookieHeader, issued)
+    const headers = new Headers(request.headers)
+    headers.set('cookie', merged)
+
+    const response = NextResponse.next({ request: { headers } })
+    for (const cookie of issued) response.headers.append('set-cookie', cookie)
+    return response
   } catch {
     // A refresh that cannot be reached must not take the admin down with it.
     // The page renders, the API answers 401, and the browser retries there.
+    return NextResponse.next()
+  }
+}
+
+/**
+ * Folds freshly issued Set-Cookie values into an existing cookie header,
+ * replacing any same-named pair rather than appending a second one — two `at`
+ * cookies in a header is a coin toss over which the API reads.
+ */
+function mergeCookies(cookieHeader: string, setCookies: string[]): string {
+  const jar = new Map<string, string>()
+
+  for (const pair of cookieHeader.split(';')) {
+    const [name, ...rest] = pair.trim().split('=')
+    if (name) jar.set(name, rest.join('='))
   }
 
-  return response
+  for (const raw of setCookies) {
+    const [pair] = raw.split(';')
+    const [name, ...rest] = pair.trim().split('=')
+    if (name) jar.set(name, rest.join('='))
+  }
+
+  return [...jar].map(([name, value]) => `${name}=${value}`).join('; ')
 }
 
 export async function proxy(request: NextRequest) {
