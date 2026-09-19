@@ -134,6 +134,21 @@ export function OrderShipments({
    * down should not cost us that record. Retrying is then just this button
    * again.
    */
+  async function getLabel(id: string) {
+    setBusy(true)
+    setError(null)
+
+    try {
+      await shipmentService.label(id)
+      await load()
+      await onChanged?.()
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Could not fetch the label')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function book(id: string) {
     setBusy(true)
     setError(null)
@@ -342,6 +357,21 @@ export function OrderShipments({
                   {editable && shipment.canBook && (
                     <Button size="sm" variant="ghost" loading={busy} onClick={() => void book(shipment.id)}>
                       Book with carrier
+                    </Button>
+                  )}
+                  {/*
+                    A booked parcel with no label yet. Booking and labelling
+                    fail independently, so this is the way back rather than
+                    leaving an operator with a parcel they cannot print for.
+                  */}
+                  {editable && !shipment.labelUrl && shipment.providerShipmentId && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      loading={busy}
+                      onClick={() => void getLabel(shipment.id)}
+                    >
+                      Get label
                     </Button>
                   )}
                   {shipment.labelUrl && (

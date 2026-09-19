@@ -441,6 +441,15 @@ export const shipmentService = {
       .post<{ shipment: AdminShipment }>(`/admin/shipments/${id}/book`)
       .then((r) => r.data.shipment),
 
+  /**
+   * Asks the carrier for the label of a parcel already booked — the way back
+   * for one that booked before the label was ready.
+   */
+  label: (id: string) =>
+    apiClient
+      .post<{ shipment: AdminShipment }>(`/admin/shipments/${id}/label`)
+      .then((r) => r.data.shipment),
+
   /** Clears the review flag once an operator has looked at the parcel. */
   markReviewed: (id: string) =>
     apiClient

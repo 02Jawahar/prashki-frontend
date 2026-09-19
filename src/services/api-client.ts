@@ -137,7 +137,17 @@ async function browserRequest<T>(
    * ten minutes while the refresh token sat there valid for a day.
    */
   const cannotRetry = ['/auth/refresh', '/auth/login', '/auth/register', '/auth/logout']
-  if (res.status === 401 && retry && !cannotRetry.some((p) => path.startsWith(p))) {
+
+  /**
+   * Somebody who has never signed in has nothing to refresh, and asking
+   * anyway costs every visitor a request that answers 403. The server leaves
+   * a readable marker when a session exists; it holds no secret, only the
+   * fact.
+   */
+  const hadSession =
+    typeof document === 'undefined' || document.cookie.includes('has_session=1')
+
+  if (res.status === 401 && retry && hadSession && !cannotRetry.some((p) => path.startsWith(p))) {
     if (await refreshSession()) {
       return browserRequest<T>(path, { method, body, isFormData, retry: false })
     }
