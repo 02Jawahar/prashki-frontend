@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Volume2, VolumeX } from 'lucide-react'
 import type { HomeSection } from '@/types/api'
 
 type FilmBandData = Extract<HomeSection, { type: 'film-band' }>
@@ -9,10 +10,15 @@ type FilmBandData = Extract<HomeSection, { type: 'film-band' }>
 /**
  * One film across the full width of the page, in whatever shape it was shot.
  *
- * Unlike the film wall at the top, this is not cropped to 9:16 — a landscape
- * film with people and captions in it loses most of itself in a vertical
- * frame. The element sizes itself from the poster, so the page does not jump
- * when the video arrives.
+ * Unlike the film wall at the top, this is not cropped — the subtitles run
+ * along the very bottom edge of the frame, so anything taken off the top or
+ * bottom cuts words in half. It is held to a maximum height instead and
+ * centred, which keeps the whole frame at a size that does not swallow the
+ * page.
+ *
+ * Someone is speaking in it, so it carries sound. Autoplay is only permitted
+ * muted, so it starts silent with a control to turn sound on — and the
+ * subtitles mean the film still reads with the sound off.
  *
  * Nothing is fetched until the band is nearly on screen. It is the heaviest
  * thing on the homepage, and most visitors never scroll this far; loading it
@@ -21,6 +27,7 @@ type FilmBandData = Extract<HomeSection, { type: 'film-band' }>
 export function FilmBand({ data }: { data: FilmBandData }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [near, setNear] = useState(false)
+  const [muted, setMuted] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
 
   useEffect(() => {
@@ -59,19 +66,44 @@ export function FilmBand({ data }: { data: FilmBandData }) {
   }, [play, reducedMotion])
 
   return (
-    <section className="mt-16 md:mt-20">
-      <video
-        ref={videoRef}
-        // Attached only once the band is nearly in view.
-        src={near && !reducedMotion ? data.video : undefined}
-        poster={data.poster}
-        muted
-        loop
-        playsInline
-        preload="none"
-        aria-label={data.heading || 'Studio film'}
-        className="block h-auto w-full"
-      />
+    <section className="mt-16 bg-shell md:mt-20">
+      <div className="relative mx-auto w-fit max-w-full">
+        <video
+          ref={videoRef}
+          // Attached only once the band is nearly in view.
+          src={near && !reducedMotion ? data.video : undefined}
+          poster={data.poster}
+          muted={muted}
+          loop
+          playsInline
+          preload="none"
+          aria-label={data.heading || 'Studio film'}
+          // Held to a height rather than stretched to the page. `w-auto` keeps
+          // the shape it was shot in; `max-w-full` lets a phone fill its width.
+          className="block h-auto max-h-[68vh] w-auto max-w-full"
+        />
+
+        {near && !reducedMotion && (
+          <button
+            type="button"
+            onClick={() => {
+              const video = videoRef.current
+              if (!video) return
+              video.muted = !video.muted
+              setMuted(video.muted)
+            }}
+            // The label says what pressing it does, not what is happening.
+            aria-label={muted ? 'Turn the sound on' : 'Turn the sound off'}
+            className="absolute bottom-4 right-4 flex size-10 items-center justify-center rounded-full bg-ink/45 text-white backdrop-blur-sm transition-colors hover:bg-ink/65"
+          >
+            {muted ? (
+              <VolumeX className="size-4" strokeWidth={1.7} />
+            ) : (
+              <Volume2 className="size-4" strokeWidth={1.7} />
+            )}
+          </button>
+        )}
+      </div>
 
       {(data.heading || data.body || (data.ctaHref && data.ctaLabel)) && (
         <div className="container-pk py-10 text-center md:py-14">
