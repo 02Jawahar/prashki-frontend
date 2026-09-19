@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { adminService } from '@/services/admin.service'
@@ -11,6 +12,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Modal,
   Select,
   SkeletonRows,
   StatusBadge,
@@ -18,7 +20,6 @@ import {
 } from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { AdminCategory } from '@/types/api'
-import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 
 export default function AdminCategoriesPage() {
   const { can } = useAuth()
@@ -26,7 +27,6 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<AdminCategory | 'new' | null>(null)
-  const editorRef = useScrollToEditor(Boolean(editing))
   const [deleting, setDeleting] = useState<AdminCategory | null>(null)
   const [removing, setRemoving] = useState(false)
 
@@ -80,19 +80,28 @@ export default function AdminCategoriesPage() {
 
       {error && <Alert>{error}</Alert>}
 
-      {editing && (
-        <div ref={editorRef} className="scroll-mt-6">
-        <CategoryForm
-          category={editing === 'new' ? undefined : editing}
-          categories={categories}
-          onDone={async () => {
-            setEditing(null)
-            await load()
-          }}
-          onCancel={() => setEditing(null)}
-        />
-        </div>
-      )}
+      {/*
+        Over the page, not above it. This list runs to twenty-odd rows; an
+        editor rendered at the top is out of sight from the bottom of it, and
+        a button that appears to do nothing is worse than no button.
+      */}
+      <Modal
+        open={Boolean(editing)}
+        title={editing === 'new' ? 'New category' : `Edit ${editing ? editing.name : 'category'}`}
+        onClose={() => setEditing(null)}
+      >
+        {editing && (
+          <CategoryForm
+            category={editing === 'new' ? undefined : editing}
+            categories={categories}
+            onDone={async () => {
+              setEditing(null)
+              await load()
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+      </Modal>
 
       <div className="mt-5 border border-rule bg-white">
         {loading ? (
@@ -130,6 +139,19 @@ export default function AdminCategoriesPage() {
                     </td>
                     {can('category.manage') && (
                       <td className="whitespace-nowrap text-right">
+                        {/*
+                          Only where there is something to arrange. A category
+                          with one product, or none, has no order to set and an
+                          Arrange link on it is a dead end.
+                        */}
+                        {c.productCount > 1 && (
+                          <Link
+                            href={`/admin/categories/${c.id}/arrange`}
+                            className="mr-3 text-xs text-ink-soft hover:text-ink"
+                          >
+                            Arrange
+                          </Link>
+                        )}
                         <button
                           type="button"
                           onClick={() => setEditing(c)}

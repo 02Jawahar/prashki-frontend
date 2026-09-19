@@ -296,6 +296,78 @@ export function ConfirmDialog({
   )
 }
 
+/**
+ * A form shown over the page rather than above it.
+ *
+ * Editors used to render at the top of the list and a hook scrolled you to
+ * them. That works on a short page and fails quietly on a long one: press Edit
+ * on the fortieth category and the form appears somewhere you are not, the
+ * scroll is easy to miss, and the honest reading is that the button did
+ * nothing. Over the page, there is nowhere for it to hide.
+ *
+ * Escape closes it, a click on the backdrop closes it, and focus moves inside
+ * on open so a keyboard is not left behind the overlay. The panel scrolls
+ * itself rather than the page, so a tall form on a short screen still reaches
+ * its own Save button.
+ */
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean
+  title: string
+  onClose: () => void
+  children: ReactNode
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    panelRef.current?.focus()
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+
+    // The page behind must not scroll while the panel is up; otherwise a
+    // scroll gesture meant for the form moves the list underneath it.
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previous
+    }
+  }, [open, onClose])
+
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 sm:p-8"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="my-auto w-full max-w-2xl border border-rule bg-paper shadow-lg outline-none"
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function SkeletonRows({ rows = 5, className }: { rows?: number; className?: string }) {
   return (
     <div className={cn('space-y-2', className)}>
