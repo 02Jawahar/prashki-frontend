@@ -148,7 +148,30 @@ export interface CarrierAdapter {
   isDefault: boolean
 }
 
+export interface ParcelDefaults {
+  weightGrams: number
+  lengthMm: number
+  widthMm: number
+  heightMm: number
+}
+
 export const shippingAdminService = {
+  /** What a parcel is assumed to be when nobody has weighed or measured it. */
+  parcelDefaults: () =>
+    apiClient
+      .get<{ parcelDefaults: ParcelDefaults; volumetricGrams: number; builtIn: ParcelDefaults }>(
+        '/admin/shipping/parcel-defaults',
+      )
+      .then((r) => r.data),
+
+  saveParcelDefaults: (input: ParcelDefaults) =>
+    apiClient
+      .put<{ parcelDefaults: ParcelDefaults; volumetricGrams: number }>(
+        '/admin/shipping/parcel-defaults',
+        input,
+      )
+      .then((r) => r.data),
+
   zones: () =>
     apiClient
       .get<{

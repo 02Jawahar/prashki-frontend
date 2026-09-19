@@ -11,6 +11,7 @@ import {
   type ShippingZone,
 } from '@/services/admin-modules.service'
 import { ApiRequestError } from '@/services/api-client'
+import { ParcelDefaultsCard } from '@/components/admin/parcel-defaults'
 import { formatPrice } from '@/lib/money'
 import { useScrollToEditor } from '@/hooks/use-scroll-to-editor'
 import {
@@ -123,6 +124,15 @@ export default function AdminShippingPage() {
       </header>
 
       {error && <Alert>{error}</Alert>}
+
+      {/*
+        Above the zones on purpose. These numbers apply to every parcel the
+        shop sends, whatever zone it goes to, and they are the ones nobody
+        thinks about until a weight discrepancy appears on the passbook.
+      */}
+      <div className="mb-6">
+        <ParcelDefaultsCard />
+      </div>
       {notice && <Alert tone="info">{notice}</Alert>}
 
       {carriers.length > 0 && <Carriers carriers={carriers} />}
