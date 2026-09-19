@@ -15,9 +15,10 @@ type VideoGridData = Extract<HomeSection, { type: 'video-grid' }>
  * most of them reach over mobile data — so each tile ships its poster, and the
  * video is requested the first time someone shows interest in it.
  *
- * "Interest" is hover on a pointer device and a tap on a touch one, because
- * touch devices have no hover: a tile that only reacts to hover is a still
- * image on every phone, which is most of the audience.
+ * "Interest" is hover on a pointer device. A touch device has no hover, so
+ * there the film on screen starts itself — one at a time, whichever the
+ * carousel is centred on. A tile that only reacted to hover was a still image
+ * on every phone, which is most of the audience.
  *
  * Anyone who has asked their system for reduced motion gets the posters and no
  * video at all. That preference is usually set by people for whom movement is
@@ -92,6 +93,7 @@ function Tile({
   priority: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   /** Stays false until someone shows interest, so the file is never fetched. */
   const [wanted, setWanted] = useState(false)
   /**
@@ -126,6 +128,42 @@ function Tile({
     if (wanted) videoRef.current?.play().catch(() => undefined)
   }, [wanted])
 
+  /**
+   * On a phone, the film on screen plays itself.
+   *
+   * Hover is what starts these on a desktop, and a touch device has no hover —
+   * so without this the whole row is four still images to most of the
+   * audience, and nothing on the page suggests otherwise. A tap works, but
+   * only for someone who guesses there is something to tap.
+   *
+   * Only the tile actually in view, and only one at a time. The row is a snap
+   * carousel on mobile, so a 60% threshold catches the centred film and no
+   * other. Playing all four would be tens of megabytes of someone's mobile
+   * data for three films they are not looking at.
+   *
+   * Scoped to `(hover: none)` rather than a screen width, because the question
+   * is whether this device can hover at all — a narrow window on a laptop
+   * still has a pointer, and hover is the better behaviour there.
+   */
+  useEffect(() => {
+    if (reducedMotion) return
+
+    const element = containerRef.current
+    if (!element) return
+    if (!window.matchMedia('(hover: none)').matches) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) play()
+        else stop()
+      },
+      { threshold: 0.6 },
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [reducedMotion, play, stop])
+
   /*
    * A div, not a link. These films are the top of the page and a stray click
    * while watching one should not navigate away — the reference behaves the
@@ -134,12 +172,14 @@ function Tile({
    */
   return (
     <div
+      ref={containerRef}
       className="group relative block aspect-[9/16] overflow-hidden bg-sage-100"
       onMouseEnter={play}
       onMouseLeave={stop}
       onFocus={play}
       onBlur={stop}
-      // Touch has no hover, so a tap is what starts the film.
+      // Kept alongside the in-view autoplay above: it restarts a film someone
+      // scrolled past and came back to before the observer catches up.
       onTouchStart={play}
       tabIndex={0}
       role="img"
