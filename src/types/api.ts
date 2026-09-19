@@ -104,6 +104,12 @@ export interface ProductDetail {
   category: CategoryRef | null
   images: ProductImage[]
   variants: ProductVariant[]
+  /**
+   * Null for a single garment. When present the page asks for a size per
+   * piece, and the customer pays this product's price — the pieces carry
+   * their own prices only so the saving can be shown.
+   */
+  set: ProductSet | null
   inStock: boolean
   totalStock: number
   createdAt: string
@@ -111,6 +117,23 @@ export interface ProductDetail {
   publishedAt: string | null
   /** Set with status SCHEDULED; a job flips it to ACTIVE when this passes. */
   scheduledFor: string | null
+}
+
+export interface SetPiece {
+  productId: string
+  name: string
+  slug: string
+  /** What the piece costs on its own. */
+  price: number
+  image: string | null
+  available: boolean
+  sizes: Array<{ id: string; name: string; sku: string; stock: number; inStock: boolean }>
+}
+
+export interface ProductSet {
+  pieces: SetPiece[]
+  /** What the pieces come to separately, for showing what the set saves. */
+  piecesTotal: number
 }
 
 export interface Category {

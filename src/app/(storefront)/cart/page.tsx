@@ -1,5 +1,7 @@
 'use client'
 
+import { Fragment } from 'react'
+
 import Image from 'next/image'
 import Link from 'next/link'
 import { Minus, Plus, ShoppingBag, X } from 'lucide-react'
@@ -9,7 +11,7 @@ import { Alert, EmptyState, SkeletonRows } from '@/components/ui'
 import { CouponField } from '@/components/storefront/coupon-field'
 
 export default function CartPage() {
-  const { cart, updateItem, removeItem, loading, error } = useCart()
+  const { cart, updateItem, removeItem, removeSet, loading, error } = useCart()
 
   if (!cart) {
     return (
@@ -58,8 +60,38 @@ export default function CartPage() {
             )}
 
             <ul className="border-t border-hairline">
-              {items.map((item) => (
-                <li key={item.id} className="flex gap-5 border-b border-hairline py-6">
+              {items.map((item, index) => (
+                <Fragment key={item.id}>
+                  {/*
+                    The set's name above its pieces, so three lines read as the
+                    one thing that was bought rather than three garments that
+                    happen to be adjacent.
+                  */}
+                  {item.setGroupId && items[index - 1]?.setGroupId !== item.setGroupId && (
+                    <li className="flex items-center justify-between gap-4 border-b border-hairline bg-sage-50 px-4 py-2.5">
+                      <span className="label-caps text-[0.68rem] text-ink">
+                        {item.setName}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => void removeSet(item.setGroupId!)}
+                        className="link-underline text-xs text-ink-soft hover:text-ink disabled:opacity-40"
+                      >
+                        Remove set
+                      </button>
+                    </li>
+                  )}
+                <li
+                  key={item.id}
+                  className={`flex gap-5 py-6 ${
+                    // A set's pieces are one thing the customer bought, so only
+                    // the last of them closes with a rule.
+                    item.setGroupId && items[index + 1]?.setGroupId === item.setGroupId
+                      ? ''
+                      : 'border-b border-hairline'
+                  }`}
+                >
                   <Link
                     href={`/products/${item.product.slug}`}
                     className="relative aspect-2/3 w-24 shrink-0 overflow-hidden bg-sage-50 md:w-32"
@@ -92,17 +124,27 @@ export default function CartPage() {
                         )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => void removeItem(item.id)}
-                        aria-label={`Remove ${item.product.name}`}
-                        className="h-fit text-ink-soft hover:text-ink"
-                      >
-                        <X className="size-4" strokeWidth={1.4} />
-                      </button>
+                      {/*
+                        A piece of a set cannot be removed on its own. What
+                        would be left is part of a set still priced as a whole
+                        one — the set comes out together, from the header above.
+                      */}
+                      {!item.setGroupId && (
+                        <button
+                          type="button"
+                          onClick={() => void removeItem(item.id)}
+                          aria-label={`Remove ${item.product.name}`}
+                          className="h-fit text-ink-soft hover:text-ink"
+                        >
+                          <X className="size-4" strokeWidth={1.4} />
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-auto flex items-end justify-between pt-4">
+                      {item.setGroupId ? (
+                        <span className="text-xs text-ink-soft">Part of a set</span>
+                      ) : (
                       <div className="flex items-center border border-rule">
                         <button
                           type="button"
@@ -124,10 +166,12 @@ export default function CartPage() {
                           <Plus className="size-3" strokeWidth={1.6} />
                         </button>
                       </div>
+                      )}
                       <span>{formatPrice(item.lineTotal)}</span>
                     </div>
                   </div>
                 </li>
+                </Fragment>
               ))}
             </ul>
           </div>

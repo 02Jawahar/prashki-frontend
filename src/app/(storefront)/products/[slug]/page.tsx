@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { productService } from '@/services/product.service'
 import { ProductGallery } from '@/components/storefront/product-gallery'
 import { AddToCart } from '@/components/storefront/add-to-cart'
+import { SetBuy } from '@/components/storefront/set-buy'
 import { ProductGrid, SectionHeading } from '@/components/storefront/product-card'
 import { ProductReviews } from '@/components/storefront/product-reviews'
 import { WishlistButton } from '@/components/storefront/wishlist-button'
@@ -163,7 +164,8 @@ export default async function ProductDetailPage({
             )}
 
             <div className="mt-6">
-              <AddToCart product={product} />
+              {/* A set asks for a size per piece; a single garment asks once. */}
+              {product.set ? <SetBuy product={product} /> : <AddToCart product={product} />}
             </div>
 
             <WishlistButton

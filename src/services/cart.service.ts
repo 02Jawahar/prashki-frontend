@@ -14,6 +14,13 @@ export interface CartItem {
   discountPercent: number
   availableStock: number
   purchasable: boolean
+  /**
+   * Set this line was bought as part of. Null for a piece bought on its own.
+   * Lines sharing a group are shown together and removed together.
+   */
+  setGroupId: string | null
+  setName: string | null
+  setSlug: string | null
   variant: { id: string; name: string; sku: string }
   product: { id: string; name: string; slug: string; image: string | null }
 }
@@ -60,6 +67,20 @@ export const cartService = {
 
   removeItem: (itemId: string) =>
     apiClient.delete<{ cart: Cart }>(`/cart/items/${itemId}`).then((r) => r.data.cart),
+
+  /**
+   * Buys a set: the chosen pieces and a size for each, in one request. The
+   * server decides what it costs — taking the whole set earns the set price,
+   * taking part of it pays for the pieces taken.
+   */
+  addSet: (setProductId: string, pieces: Array<{ productId: string; variantId: string }>) =>
+    apiClient
+      .post<{ cart: Cart }>('/cart/sets', { setProductId, pieces })
+      .then((r) => r.data.cart),
+
+  /** A set leaves the bag whole. Half a set is not something anyone ordered. */
+  removeSet: (setGroupId: string) =>
+    apiClient.delete<{ cart: Cart }>(`/cart/sets/${setGroupId}`).then((r) => r.data.cart),
 
   /**
    * Sends the code, never an amount. The server decides what it is worth and

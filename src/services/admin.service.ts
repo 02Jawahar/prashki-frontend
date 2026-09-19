@@ -120,6 +120,19 @@ export const adminService = {
       .patch<{ product: ProductDetail }>(`/admin/products/${productId}/images/order`, { imageIds })
       .then((r) => r.data.product),
 
+  // ----------------------------------------------------------------- sets
+
+  /**
+   * The pieces a set is made of, sent whole and in order. An empty list turns
+   * the set back into an ordinary product.
+   */
+  setComponents: (productId: string, componentProductIds: string[]) =>
+    apiClient
+      .put<{ product: ProductDetail }>(`/admin/products/${productId}/components`, {
+        componentProductIds,
+      })
+      .then((r) => r.data.product),
+
   // ------------------------------------------------------------ inventory
   inventory: (query: { q?: string; lowOnly?: boolean; page?: number; perPage?: number } = {}) =>
     apiClient

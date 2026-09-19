@@ -21,6 +21,11 @@ interface CartContextValue {
   openCart: () => void
   closeCart: () => void
   addItem: (variantId: string, quantity?: number) => Promise<void>
+  addSet: (
+    setProductId: string,
+    pieces: Array<{ productId: string; variantId: string }>,
+  ) => Promise<void>
+  removeSet: (setGroupId: string) => Promise<void>
   updateItem: (itemId: string, quantity: number) => Promise<void>
   removeItem: (itemId: string) => Promise<void>
   applyCoupon: (code: string) => Promise<void>
@@ -84,6 +89,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       refresh,
       addItem: (variantId, quantity = 1) =>
         run(() => cartService.addItem(variantId, quantity), { openDrawer: true }),
+      addSet: (setProductId, pieces) =>
+        run(() => cartService.addSet(setProductId, pieces), { openDrawer: true }),
+      removeSet: (setGroupId) => run(() => cartService.removeSet(setGroupId)),
       updateItem: (itemId, quantity) => run(() => cartService.updateItem(itemId, quantity)),
       removeItem: (itemId) => run(() => cartService.removeItem(itemId)),
       applyCoupon: (code) => run(() => cartService.applyCoupon(code)),
