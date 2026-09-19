@@ -20,6 +20,8 @@ export interface CartItem {
    */
   setGroupId: string | null
   setName: string | null
+  /** "Top", "Full set" — which part of the product this line is. */
+  setOption: string | null
   setSlug: string | null
   variant: { id: string; name: string; sku: string }
   product: { id: string; name: string; slug: string; image: string | null }
@@ -59,8 +61,10 @@ export interface Cart {
 export const cartService = {
   get: () => apiClient.get<{ cart: Cart }>('/cart').then((r) => r.data.cart),
 
-  addItem: (variantId: string, quantity = 1) =>
-    apiClient.post<{ cart: Cart }>('/cart/items', { variantId, quantity }).then((r) => r.data.cart),
+  addItem: (variantId: string, quantity = 1, setOptionId?: string) =>
+    apiClient
+      .post<{ cart: Cart }>('/cart/items', { variantId, quantity, setOptionId })
+      .then((r) => r.data.cart),
 
   updateItem: (itemId: string, quantity: number) =>
     apiClient.patch<{ cart: Cart }>(`/cart/items/${itemId}`, { quantity }).then((r) => r.data.cart),

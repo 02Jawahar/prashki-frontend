@@ -133,6 +133,15 @@ export const adminService = {
       })
       .then((r) => r.data.product),
 
+  /**
+   * What may be bought of one product — "Top", "Full set", each priced. Sent
+   * whole; an empty list sells the garment whole again.
+   */
+  setOptions: (productId: string, options: Array<{ label: string; price: number }>) =>
+    apiClient
+      .put<{ product: ProductDetail }>(`/admin/products/${productId}/set-options`, { options })
+      .then((r) => r.data.product),
+
   // ------------------------------------------------------------ inventory
   inventory: (query: { q?: string; lowOnly?: boolean; page?: number; perPage?: number } = {}) =>
     apiClient

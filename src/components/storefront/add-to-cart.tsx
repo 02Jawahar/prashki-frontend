@@ -19,6 +19,19 @@ export function AddToCart({ product }: { product: ProductDetail }) {
   const router = useRouter()
   const { addItem, loading } = useCart()
 
+  /**
+   * What may be bought of this product, when it is sold in parts. One size
+   * governs whichever part is chosen — that is the trade for the pieces not
+   * being products of their own.
+   */
+  const parts = product.setOptions ?? []
+  const [partId, setPartId] = useState<string | null>(
+    // The whole thing to begin with: it is what the page is for, and what the
+    // headline price refers to.
+    () => parts[parts.length - 1]?.id ?? null,
+  )
+  const part = parts.find((p) => p.id === partId) ?? null
+
   const sellable = product.variants.filter((v) => v.status === 'ACTIVE')
   const single = sellable.length === 1 && sellable[0]!.name === 'Default'
 
@@ -28,7 +41,8 @@ export function AddToCart({ product }: { product: ProductDetail }) {
   const [touched, setTouched] = useState(false)
 
   const selected = sellable.find((v) => v.id === variantId) ?? null
-  const price = selected?.price ?? product.price
+  // A chosen part prices the line; otherwise the size, otherwise the product.
+  const price = part?.price ?? selected?.price ?? product.price
   const maxQuantity = Math.min(selected?.stock ?? 0, 20)
   const soldOut = selected ? selected.stock <= 0 : !product.inStock
 
@@ -41,7 +55,7 @@ export function AddToCart({ product }: { product: ProductDetail }) {
       return false
     }
     try {
-      await addItem(variantId, quantity)
+      await addItem(variantId, quantity, part?.id)
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add to bag')
@@ -56,6 +70,13 @@ export function AddToCart({ product }: { product: ProductDetail }) {
 
   return (
     <div>
+      {parts.length > 0 && (
+        <p className="mb-1 text-sm text-ink-soft">
+          {formatPrice(Math.min(...parts.map((p) => p.price)))} –{' '}
+          {formatPrice(Math.max(...parts.map((p) => p.price)))}
+        </p>
+      )}
+
       <div className="flex items-baseline gap-3">
         {product.compareAtPrice && product.compareAtPrice > price && (
           <span className="text-ink-soft line-through">{formatPrice(product.compareAtPrice)}</span>
@@ -68,6 +89,32 @@ export function AddToCart({ product }: { product: ProductDetail }) {
         )}
       </div>
       <p className="mt-1 text-xs text-ink-soft">Inclusive of all taxes</p>
+
+      {parts.length > 0 && (
+        <div className="mt-7">
+          <div className="mb-2.5 flex items-baseline gap-2">
+            <span className="label-caps">Set</span>
+            <span className="text-xs text-ink-soft">{part?.label ?? 'Choose a part'}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {parts.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={option.id === partId}
+                onClick={() => setPartId(option.id)}
+                className={`border px-4 py-2.5 text-sm transition-colors ${
+                  option.id === partId
+                    ? 'border-sage-700 bg-sage-700 text-white'
+                    : 'border-rule text-ink hover:border-ink'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!single && (
         <div className="mt-7">

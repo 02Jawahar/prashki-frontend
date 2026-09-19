@@ -20,7 +20,7 @@ interface CartContextValue {
   drawerOpen: boolean
   openCart: () => void
   closeCart: () => void
-  addItem: (variantId: string, quantity?: number) => Promise<void>
+  addItem: (variantId: string, quantity?: number, setOptionId?: string) => Promise<void>
   addSet: (
     setProductId: string,
     pieces: Array<{ productId: string; variantId: string }>,
@@ -87,8 +87,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       openCart: () => setDrawerOpen(true),
       closeCart: () => setDrawerOpen(false),
       refresh,
-      addItem: (variantId, quantity = 1) =>
-        run(() => cartService.addItem(variantId, quantity), { openDrawer: true }),
+      addItem: (variantId, quantity = 1, setOptionId) =>
+        run(() => cartService.addItem(variantId, quantity, setOptionId), { openDrawer: true }),
       addSet: (setProductId, pieces) =>
         run(() => cartService.addSet(setProductId, pieces), { openDrawer: true }),
       removeSet: (setGroupId) => run(() => cartService.removeSet(setGroupId)),

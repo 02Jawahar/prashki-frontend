@@ -113,6 +113,11 @@ export interface ProductDetail {
    * their own prices only so the saving can be shown.
    */
   set: ProductSet | null
+  /**
+   * What may be bought of this one product — "Top", "Full set", each priced.
+   * Null for an ordinary garment. One size governs whichever part is chosen.
+   */
+  setOptions: SetOption[] | null
   inStock: boolean
   totalStock: number
   createdAt: string
@@ -120,6 +125,13 @@ export interface ProductDetail {
   publishedAt: string | null
   /** Set with status SCHEDULED; a job flips it to ACTIVE when this passes. */
   scheduledFor: string | null
+}
+
+export interface SetOption {
+  id: string
+  label: string
+  price: number
+  position: number
 }
 
 export interface SetPiece {

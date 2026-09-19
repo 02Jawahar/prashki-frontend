@@ -9,6 +9,7 @@ import { ProductForm } from '@/components/admin/product-form'
 import { ProductImages } from '@/components/admin/product-images'
 import { ProductVariants } from '@/components/admin/product-variants'
 import { ProductSet } from '@/components/admin/product-set'
+import { ProductSetOptions } from '@/components/admin/product-set-options'
 import { Alert, Button, ConfirmDialog, Spinner, StatusBadge } from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
 import type { ProductDetail } from '@/types/api'
@@ -137,6 +138,8 @@ export default function EditProductPage() {
             setNotice('Changes saved. The storefront uses the new values immediately.')
           }}
         />
+        <ProductSetOptions product={product} onChange={setProduct} />
+
         <ProductSet product={product} onChange={setProduct} />
 
         <ProductVariants product={product} onChange={setProduct} />
