@@ -61,6 +61,16 @@ export interface Cart {
 export const cartService = {
   get: () => apiClient.get<{ cart: Cart }>('/cart').then((r) => r.data.cart),
 
+  /**
+   * Several parts of one garment, as one purchase. They come back tied
+   * together by a group id, so the bag shows them as one and removing one
+   * removes all of them.
+   */
+  addParts: (variantId: string, setOptionIds: string[], quantity = 1) =>
+    apiClient
+      .post<{ cart: Cart }>('/cart/parts', { variantId, setOptionIds, quantity })
+      .then((r) => r.data.cart),
+
   addItem: (variantId: string, quantity = 1, setOptionId?: string) =>
     apiClient
       .post<{ cart: Cart }>('/cart/items', { variantId, quantity, setOptionId })
