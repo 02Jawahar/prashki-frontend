@@ -126,8 +126,18 @@ async function browserRequest<T>(
     body: isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
   })
 
-  // An expired access token is recoverable; anything else is not.
-  if (res.status === 401 && retry && !path.startsWith('/auth/')) {
+  /**
+   * An expired access token is recoverable; anything else is not.
+   *
+   * Only the calls that establish a session are excluded. `/auth/me` used to
+   * be caught by a blanket `/auth/` check, and it is the one the app asks on
+   * every load to find out who you are — so the moment the access token
+   * expired it answered 401, nothing refreshed, and you were bounced to the
+   * sign-in page. With a ten-minute admin token that meant signing in every
+   * ten minutes while the refresh token sat there valid for a day.
+   */
+  const cannotRetry = ['/auth/refresh', '/auth/login', '/auth/register', '/auth/logout']
+  if (res.status === 401 && retry && !cannotRetry.some((p) => path.startsWith(p))) {
     if (await refreshSession()) {
       return browserRequest<T>(path, { method, body, isFormData, retry: false })
     }
