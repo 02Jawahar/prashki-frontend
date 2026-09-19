@@ -10,7 +10,17 @@ import { Alert, Button, EmptyState, Field, Input } from '@/components/ui'
 import type { ProductDetail } from '@/types/api'
 
 /**
- * The pieces a set is made of (M03).
+ * The pieces a set is made of (M03) — NOT MOUNTED.
+ *
+ * This is the heavier way to sell a set: each piece its own product, with its
+ * own page, photographs and sizes, so a customer can find the cape by itself.
+ * The shop sells sets the lighter way instead — see ProductSetOptions — and
+ * two panels offering different kinds of set on the same screen was a way to
+ * end up with the wrong one by accident.
+ *
+ * Kept, with its API and tests, because the question it answers is a real one:
+ * should the cape be findable on its own? Re-mount it on the product page if
+ * the answer changes.
  *
  * A set is an ordinary product that happens to be assembled from others. It
  * has its own price, and that is what the customer pays — the pieces keep

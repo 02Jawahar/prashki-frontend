@@ -89,7 +89,8 @@ export function ProductSetOptions({
           </p>
           <p className="mt-2 max-w-lg text-xs text-ink-soft">
             The sizes below apply to whichever part is chosen, and the parts have no page of their
-            own. If a customer should be able to find the top by itself, use <b>Pieces</b> instead.
+            own — they cannot be found in a category or in search. Somebody who should be able to
+            browse straight to the top wants it as a product of its own instead.
           </p>
         </div>
         {rows.length < 8 && (

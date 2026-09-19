@@ -8,7 +8,6 @@ import { adminService } from '@/services/admin.service'
 import { ProductForm } from '@/components/admin/product-form'
 import { ProductImages } from '@/components/admin/product-images'
 import { ProductVariants } from '@/components/admin/product-variants'
-import { ProductSet } from '@/components/admin/product-set'
 import { ProductSetOptions } from '@/components/admin/product-set-options'
 import { Alert, Button, ConfirmDialog, Spinner, StatusBadge } from '@/components/ui'
 import { useAuth } from '@/hooks/use-auth'
@@ -139,8 +138,6 @@ export default function EditProductPage() {
           }}
         />
         <ProductSetOptions product={product} onChange={setProduct} />
-
-        <ProductSet product={product} onChange={setProduct} />
 
         <ProductVariants product={product} onChange={setProduct} />
       </div>
