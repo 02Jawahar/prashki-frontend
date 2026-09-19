@@ -51,8 +51,11 @@ export function FilmBand({ data }: { data: FilmBandData }) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
+          // Only flips the flag. Playing here would run against a video that
+          // has no source yet — the src is attached on the render this
+          // triggers, not on this one — and the observer would not fire again
+          // to try a second time, because the band is still on screen.
           setNear(true)
-          play()
         } else {
           // A band scrolled past stops decoding. On a phone that is the
           // difference between a warm device and a flat battery.
@@ -63,7 +66,18 @@ export function FilmBand({ data }: { data: FilmBandData }) {
     )
     observer.observe(element)
     return () => observer.disconnect()
-  }, [play, reducedMotion])
+  }, [reducedMotion])
+
+  /**
+   * Start it once the source is actually on the element.
+   *
+   * This runs after the render that attaches `src`, which is the render the
+   * observer asked for. `onCanPlay` backs it up: a browser that refuses the
+   * first attempt — because it has no data yet — gets a second once it does.
+   */
+  useEffect(() => {
+    if (near && !reducedMotion) play()
+  }, [near, reducedMotion, play])
 
   return (
     <section className="mt-16 bg-shell md:mt-20">
@@ -77,6 +91,7 @@ export function FilmBand({ data }: { data: FilmBandData }) {
           loop
           playsInline
           preload="none"
+          onCanPlay={play}
           aria-label={data.heading || 'Studio film'}
           // Full width, its own height. The film is already the shape of the
           // band, so nothing needs cropping or capping here.
