@@ -73,6 +73,8 @@ export interface ProductVariant {
   name: string
   sku: string
   price: number
+  /** Grams. Null falls back to the store-wide default at checkout. */
+  weightGrams: number | null
   status: VariantStatus
   position: number
   stock: number
@@ -131,6 +133,11 @@ export interface SetOption {
   id: string
   label: string
   price: number
+  /**
+   * Grams, for this part alone. A top and the full set share a size variant
+   * but not a parcel, so the weight cannot be read off the variant.
+   */
+  weightGrams: number | null
   position: number
 }
 

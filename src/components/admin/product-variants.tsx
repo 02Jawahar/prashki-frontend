@@ -27,6 +27,7 @@ export function ProductVariants({
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ name: '', sku: '', stock: '0' })
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({})
+  const [weightDrafts, setWeightDrafts] = useState<Record<string, string>>({})
 
   const canEdit = can('product.update')
   const canStock = can('inventory.adjust')
@@ -50,6 +51,40 @@ export function ProductVariants({
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update stock')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /**
+   * Weight is a plain field, unlike stock.
+   *
+   * Nothing downstream depends on its history - the carrier reweighs the
+   * parcel at the hub regardless - so there is no ledger to write and no
+   * reason to route it through one. Blank clears it, which is the honest way
+   * to say "nobody has weighed this" rather than storing a zero that reads as
+   * a weightless garment.
+   */
+  async function saveWeight(variantId: string) {
+    const raw = (weightDrafts[variantId] ?? '').trim()
+    const value = raw === '' ? null : Number(raw)
+
+    if (value !== null && (!Number.isInteger(value) || value < 0)) {
+      setError('Weight must be a whole number of grams, or blank')
+      return
+    }
+
+    setBusy(variantId)
+    setError(null)
+    try {
+      onChange(await adminService.updateVariant(product.id, variantId, { weightGrams: value }))
+      setWeightDrafts((d) => {
+        const next = { ...d }
+        delete next[variantId]
+        return next
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the weight')
     } finally {
       setBusy(null)
     }
@@ -116,6 +151,7 @@ export function ProductVariants({
               <th>Variant</th>
               <th>SKU</th>
               <th>Price</th>
+              <th>Weight</th>
               <th>Stock</th>
               <th>Status</th>
               {canEdit && <th />}
@@ -129,6 +165,43 @@ export function ProductVariants({
                   <td className="whitespace-nowrap">{v.name}</td>
                   <td className="whitespace-nowrap text-xs text-ink-soft">{v.sku}</td>
                   <td className="whitespace-nowrap tabular-nums">{formatPrice(v.price)}</td>
+                  <td>
+                    {canEdit ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="g"
+                          className="w-24 px-2 py-1 text-sm"
+                          value={
+                            weightDrafts[v.id] !== undefined
+                              ? weightDrafts[v.id]
+                              : v.weightGrams === null
+                                ? ''
+                                : String(v.weightGrams)
+                          }
+                          onChange={(e) =>
+                            setWeightDrafts((d) => ({ ...d, [v.id]: e.target.value }))
+                          }
+                          aria-label={`Weight in grams for ${v.name}`}
+                        />
+                        {weightDrafts[v.id] !== undefined && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            loading={busy === v.id}
+                            onClick={() => void saveWeight(v.id)}
+                          >
+                            Save
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="tabular-nums">
+                        {v.weightGrams === null ? '-' : `${v.weightGrams} g`}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     {canStock ? (
                       <div className="flex items-center gap-2">

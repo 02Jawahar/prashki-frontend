@@ -86,7 +86,10 @@ export const adminService = {
     apiClient.delete<{ deleted?: boolean; archived?: boolean; message?: string }>(`/admin/products/${id}`).then((r) => r.data),
 
   // ------------------------------------------------------------- variants
-  createVariant: (productId: string, input: { name: string; sku: string; price?: number | null; stock: number }) =>
+  createVariant: (
+    productId: string,
+    input: { name: string; sku: string; price?: number | null; stock: number; weightGrams?: number | null },
+  ) =>
     apiClient
       .post<{ product: ProductDetail }>(`/admin/products/${productId}/variants`, input)
       .then((r) => r.data.product),
@@ -94,7 +97,13 @@ export const adminService = {
   updateVariant: (
     productId: string,
     variantId: string,
-    input: { name?: string; sku?: string; price?: number | null; status?: 'ACTIVE' | 'INACTIVE' },
+    input: {
+      name?: string
+      sku?: string
+      price?: number | null
+      weightGrams?: number | null
+      status?: 'ACTIVE' | 'INACTIVE'
+    },
   ) =>
     apiClient
       .patch<{ product: ProductDetail }>(`/admin/products/${productId}/variants/${variantId}`, input)
@@ -137,7 +146,10 @@ export const adminService = {
    * What may be bought of one product — "Top", "Full set", each priced. Sent
    * whole; an empty list sells the garment whole again.
    */
-  setOptions: (productId: string, options: Array<{ label: string; price: number }>) =>
+  setOptions: (
+    productId: string,
+    options: Array<{ label: string; price: number; weightGrams?: number | null }>,
+  ) =>
     apiClient
       .put<{ product: ProductDetail }>(`/admin/products/${productId}/set-options`, { options })
       .then((r) => r.data.product),
@@ -188,6 +200,30 @@ export const adminService = {
 
   updateCategory: (id: string, input: Record<string, unknown>) =>
     apiClient.patch<{ category: AdminCategory }>(`/admin/categories/${id}`, input).then((r) => r.data.category),
+
+  /** Every product in one category, in the order a customer sees them. */
+  categoryProducts: (id: string) =>
+    apiClient
+      .get<{
+        category: { id: string; name: string; slug: string }
+        products: Array<{
+          id: string
+          name: string
+          sku: string
+          status: string
+          position: number
+          featured: boolean
+          price: number
+          image: string | null
+        }>
+      }>(`/admin/categories/${id}/products`)
+      .then((r) => r.data),
+
+  /** The whole category, in order. Positions come from the list, not the caller. */
+  reorderCategoryProducts: (id: string, productIds: string[]) =>
+    apiClient
+      .put<{ reordered: number }>(`/admin/categories/${id}/products/order`, { productIds })
+      .then((r) => r.data),
 
   deleteCategory: (id: string) =>
     apiClient.delete<{ deleted: boolean }>(`/admin/categories/${id}`).then((r) => r.data),
