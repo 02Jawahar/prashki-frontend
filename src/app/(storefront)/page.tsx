@@ -7,6 +7,7 @@ import { SectionMedia } from '@/components/storefront/section-media'
 import { NewsletterForm } from '@/components/storefront/newsletter-form'
 import { ShowcaseWall } from '@/components/storefront/showcase-wall'
 import { VideoGrid } from '@/components/storefront/video-grid'
+import { FilmBand } from '@/components/storefront/film-band'
 import { ProductCarousel } from '@/components/storefront/product-carousel'
 import type { Category, HomeSection, ProductListItem, StoreSettings } from '@/types/api'
 
@@ -117,6 +118,8 @@ export default async function HomePage() {
             return <Hero key={i} data={section} />
           case 'video-grid':
             return <VideoGrid key={i} data={section} />
+          case 'film-band':
+            return <FilmBand key={i} data={section} />
           case 'services':
             return <Services key={i} items={section.items} />
           case 'featured-products':

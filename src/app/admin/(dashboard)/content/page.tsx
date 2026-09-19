@@ -26,6 +26,15 @@ type Section =
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
   | { type: 'category-banner'; heading: string; slugs: string[] }
   | {
+      type: 'film-band'
+      video: string
+      poster: string
+      heading?: string
+      body?: string
+      ctaLabel?: string
+      ctaHref?: string
+    }
+  | {
       type: 'video-grid'
       eyebrow: string
       heading: string
@@ -42,6 +51,7 @@ const SECTION_LABELS: Record<Section['type'], string> = {
   banner: 'Editorial banner',
   'category-banner': 'Shop by category',
   'video-grid': 'Film wall',
+  'film-band': 'Feature film',
   showcase: 'Customer showcase',
   newsletter: 'Newsletter',
 }
@@ -60,6 +70,8 @@ function blankSection(type: Section['type'], categories: AdminCategory[]): Secti
       return { type, heading: 'New Arrivals', limit: 8 }
     case 'category-banner':
       return { type, heading: 'Shop by category', slugs: categories.filter((c) => c.parent).slice(0, 5).map((c) => c.slug) }
+    case 'film-band':
+      return { type, video: '', poster: '', heading: '', body: '', ctaLabel: '', ctaHref: '' }
     case 'video-grid':
       // Four is what the row is designed around; the grid is four across on
       // desktop and two on mobile, so any other count leaves a gap.
@@ -470,6 +482,73 @@ function SectionFields({
                 })}
             </div>
             <p className="field-hint">Each tile uses that category&rsquo;s image.</p>
+          </div>
+        </>
+      )
+
+    case 'film-band':
+      return (
+        <>
+          <p className="mb-3 text-xs text-ink-soft">
+            One film across the full width, shown in the shape it was shot — it is not cropped to
+            a tall frame like the film wall. Keep it under about 6 MB; it only downloads once a
+            visitor scrolls near it.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MediaPicker
+              value={section.video}
+              label="Film"
+              folder="home"
+              hint="A web-sized MP4. A camera master will load for minutes."
+              onChange={(video) => onChange({ video } as Partial<Section>)}
+            />
+            <MediaPicker
+              value={section.poster}
+              label="Poster"
+              folder="home"
+              hint="Shown before the film plays, and what sets the height. Use a still from the film itself."
+              onChange={(poster) => onChange({ poster } as Partial<Section>)}
+            />
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field label="Heading" htmlFor="fb-heading" hint="Optional. Shown under the film.">
+              <Input
+                value={section.heading ?? ''}
+                disabled={readOnly}
+                onChange={(e) => onChange({ heading: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+            <Field label="Link reads as" htmlFor="fb-cta" hint='e.g. "Shop the collection".'>
+              <Input
+                value={section.ctaLabel ?? ''}
+                disabled={readOnly}
+                onChange={(e) => onChange({ ctaLabel: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-4">
+            <Field label="Body" htmlFor="fb-body" hint="Optional.">
+              <Textarea
+                rows={2}
+                value={section.body ?? ''}
+                disabled={readOnly}
+                onChange={(e) => onChange({ body: e.target.value } as Partial<Section>)}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-4">
+            <Field label="Link goes to" htmlFor="fb-href" hint="A path on this site, e.g. /products">
+              <Input
+                value={section.ctaHref ?? ''}
+                disabled={readOnly}
+                placeholder="/products"
+                onChange={(e) => onChange({ ctaHref: e.target.value } as Partial<Section>)}
+              />
+            </Field>
           </div>
         </>
       )

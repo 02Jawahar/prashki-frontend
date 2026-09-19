@@ -246,6 +246,20 @@ export type HomeSection =
       first?: string[]
     }
   | { type: 'banner'; image: string; eyebrow: string; heading: string; body: string; ctaLabel: string; ctaHref: string }
+  /**
+   * One film across the full width, in the shape it was shot — not cropped to
+   * 9:16 like the wall at the top. `poster` carries the layout: the element
+   * sizes itself from it, so the page does not jump when the video arrives.
+   */
+  | {
+      type: 'film-band'
+      video: string
+      poster: string
+      heading?: string
+      body?: string
+      ctaLabel?: string
+      ctaHref?: string
+    }
   | { type: 'category-banner'; heading: string; slugs: string[] }
   /**
    * A row of vertical films that play on hover — the hero, split.
