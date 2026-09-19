@@ -91,6 +91,14 @@ export function ProductSet({
             Leave this empty for a single garment. Add pieces and this becomes a set: the customer
             picks a size for each one and pays this product&rsquo;s price.
           </p>
+          <p className="mt-2 max-w-lg text-xs text-ink-soft">
+            Each piece must already exist as its own product, with its own price and sizes — that
+            is what lets someone buy the top without the pant. Create them first under{' '}
+            <a href="/admin/products/new" className="link-underline text-ink">
+              New product
+            </a>
+            , then find them here.
+          </p>
         </div>
         {!adding && (
           <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
@@ -108,7 +116,11 @@ export function ProductSet({
 
       {adding && (
         <div className="mt-4 border border-rule bg-sage-50 p-4">
-          <Field label="Find a piece" htmlFor="set-search" hint="Search by name or SKU.">
+          <Field
+            label="Find a piece"
+            htmlFor="set-search"
+            hint="Search by name or SKU. Only products that already exist appear here."
+          >
             <div className="relative">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
@@ -128,7 +140,10 @@ export function ProductSet({
           {results !== null && (
             <ul className="mt-3 max-h-64 space-y-1 overflow-y-auto">
               {results.length === 0 && (
-                <li className="px-1 py-2 text-xs text-ink-soft">Nothing matches that.</li>
+                <li className="px-1 py-2 text-xs text-ink-soft">
+                  Nothing matches that. A piece has to exist as its own product before it can be
+                  added to a set.
+                </li>
               )}
               {results.map((candidate) => {
                 const already = ids.includes(candidate.id)
@@ -190,7 +205,7 @@ export function ProductSet({
           <div className="mt-4">
             <EmptyState
               title="Not a set"
-              body="This is sold as one garment. Add two or more pieces to sell it as a set."
+              body="This is sold as one garment. To sell it as a set, create each piece as its own product first, then add two or more of them here."
             />
           </div>
         )
