@@ -52,6 +52,9 @@ export interface ProductListItem {
   price: number
   compareAtPrice: number | null
   discountPercent: number
+  /** Cheapest piece, when this product is a set. Null for a single garment. */
+  fromPrice: number | null
+  isSet: boolean
   status: ProductStatus
   featured: boolean
   ratingAverage: number

@@ -90,11 +90,21 @@ export function ProductCard({
           <p className="mt-1 text-[0.78rem] text-ink-soft">{product.shortDescription}</p>
         )}
         <p className="mt-2 flex items-center justify-center gap-2 text-[0.85rem]">
+          {/*
+            A set shows where it starts, not only what the whole thing costs —
+            otherwise the card reads as one expensive garment when a piece of
+            it might be a third of that.
+          */}
+          {product.isSet && product.fromPrice !== null && product.fromPrice < product.price && (
+            <span className="text-ink-soft">From</span>
+          )}
           {product.compareAtPrice && product.compareAtPrice > product.price && (
             <span className="text-ink-soft line-through">{formatPrice(product.compareAtPrice)}</span>
           )}
           <span className={product.discountPercent > 0 ? 'text-sale' : 'text-ink'}>
-            {formatPrice(product.price)}
+            {formatPrice(
+              product.isSet && product.fromPrice !== null ? product.fromPrice : product.price,
+            )}
           </span>
         </p>
       </div>
