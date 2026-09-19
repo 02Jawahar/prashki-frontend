@@ -10,11 +10,11 @@ type FilmBandData = Extract<HomeSection, { type: 'film-band' }>
 /**
  * One film across the full width of the page, in whatever shape it was shot.
  *
- * Unlike the film wall at the top, this is not cropped — the subtitles run
- * along the very bottom edge of the frame, so anything taken off the top or
- * bottom cuts words in half. It is held to a maximum height instead and
- * centred, which keeps the whole frame at a size that does not swallow the
- * page.
+ * It runs the full width and is not cropped to get there. Both of those at
+ * once only work because the film is delivered already widened: the footage
+ * sits whole in the middle of a wider frame with its own blurred edges
+ * extending to the sides. Cropping the film itself was tried and cuts the
+ * subtitles off the bottom edge, or the speaker's head off the top.
  *
  * Someone is speaking in it, so it carries sound. Autoplay is only permitted
  * muted, so it starts silent with a control to turn sound on — and the
@@ -67,7 +67,7 @@ export function FilmBand({ data }: { data: FilmBandData }) {
 
   return (
     <section className="mt-16 bg-shell md:mt-20">
-      <div className="relative mx-auto w-fit max-w-full">
+      <div className="relative w-full">
         <video
           ref={videoRef}
           // Attached only once the band is nearly in view.
@@ -78,9 +78,9 @@ export function FilmBand({ data }: { data: FilmBandData }) {
           playsInline
           preload="none"
           aria-label={data.heading || 'Studio film'}
-          // Held to a height rather than stretched to the page. `w-auto` keeps
-          // the shape it was shot in; `max-w-full` lets a phone fill its width.
-          className="block h-auto max-h-[68vh] w-auto max-w-full"
+          // Full width, its own height. The film is already the shape of the
+          // band, so nothing needs cropping or capping here.
+          className="block h-auto w-full"
         />
 
         {near && !reducedMotion && (
