@@ -91,20 +91,21 @@ export function ProductCard({
         )}
         <p className="mt-2 flex items-center justify-center gap-2 text-[0.85rem]">
           {/*
-            A set shows where it starts, not only what the whole thing costs —
-            otherwise the card reads as one expensive garment when a piece of
-            it might be a third of that.
+            A set shows its range, the same way the product page does.
+
+            "From ₹5,500" says where it starts and leaves the other end to the
+            imagination — which for a garment whose whole is more than twice
+            its cheapest piece is the part a customer most wants to know.
+            Showing both ends says the same thing and answers the question the
+            first half raises.
           */}
-          {product.isSet && product.fromPrice !== null && product.fromPrice < product.price && (
-            <span className="text-ink-soft">From</span>
-          )}
           {product.compareAtPrice && product.compareAtPrice > product.price && (
             <span className="text-ink-soft line-through">{formatPrice(product.compareAtPrice)}</span>
           )}
           <span className={product.discountPercent > 0 ? 'text-sale' : 'text-ink'}>
-            {formatPrice(
-              product.isSet && product.fromPrice !== null ? product.fromPrice : product.price,
-            )}
+            {product.isSet && product.fromPrice !== null && product.fromPrice < product.price
+              ? `${formatPrice(product.fromPrice)} — ${formatPrice(product.price)}`
+              : formatPrice(product.price)}
           </span>
         </p>
       </div>
