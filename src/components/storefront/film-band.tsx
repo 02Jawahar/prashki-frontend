@@ -51,11 +51,21 @@ export function FilmBand({ data }: { data: FilmBandData }) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          // Only flips the flag. Playing here would run against a video that
-          // has no source yet — the src is attached on the render this
-          // triggers, not on this one — and the observer would not fire again
-          // to try a second time, because the band is still on screen.
+          /**
+           * The first arrival and every one after it need different things,
+           * and the flag alone only served the first.
+           *
+           * First time there is no source on the element yet — it is attached
+           * on the render this flag triggers — so playing here would run
+           * against nothing, and the effect below starts it instead.
+           *
+           * Every time after, the source is already there and `near` is
+           * already true, so setting it again changes no state, no effect
+           * re-runs, and the film stayed paused where scrolling away left it.
+           * Once there is something to play, play it here.
+           */
           setNear(true)
+          if (element.currentSrc || element.getAttribute('src')) play()
         } else {
           // A band scrolled past stops decoding. On a phone that is the
           // difference between a warm device and a flat battery.
@@ -66,7 +76,7 @@ export function FilmBand({ data }: { data: FilmBandData }) {
     )
     observer.observe(element)
     return () => observer.disconnect()
-  }, [reducedMotion])
+  }, [reducedMotion, play])
 
   /**
    * Start it once the source is actually on the element.
