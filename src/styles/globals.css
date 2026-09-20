@@ -28,6 +28,18 @@
   --color-ink-soft: #646464;
   --color-cream: #faf8f3;
   --color-shell: #f7f6f4;
+  /*
+   * What a panel sits on when it floats above the page — dialogs, drawers,
+   * popovers. Six components already asked for `bg-paper` and the token was
+   * never defined, so every one of them rendered transparent: the size guide
+   * and the confirm dialogs have been showing the page straight through their
+   * own text.
+   *
+   * White rather than cream. These sit over a dimmed page and need to read as
+   * lifted off it; cream at this size looks like a tint someone forgot to
+   * remove.
+   */
+  --color-paper: #ffffff;
   --color-hairline: #f0f0f0;
   --color-rule: #e3e1dc;
 

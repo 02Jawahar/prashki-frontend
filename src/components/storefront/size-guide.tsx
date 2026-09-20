@@ -6,20 +6,85 @@ import { Ruler, X } from 'lucide-react'
 /**
  * Size guidance (FR-03.3).
  *
- * Measurements are in centimetres and describe the *body*, not the garment —
- * that is the question a shopper is actually asking, and garment measurements
- * vary by cut in a way a single table cannot capture.
+ * The studio's own measurements, in inches, laid out the way the studio's own
+ * chart lays them out: sizes across, measurements down. That is how a person
+ * reads a size chart — they know their bust and are looking along the row for
+ * where it lands — and it is the arrangement the printed chart uses, so the
+ * two cannot drift into saying different things.
+ *
+ * These describe the *body*, not the garment. It is the question a shopper is
+ * actually asking, and garment measurements vary by cut in a way one table
+ * cannot hold.
+ *
+ * Tops and bottoms separately, because a bottom has no bust or shoulder and a
+ * single table with empty cells asks the reader to work out which columns
+ * apply to what they are buying.
  *
  * Static for now. When sizing differs by category this becomes a setting the
- * catalogue team edits, which is why the table is data rather than markup.
+ * catalogue team edits, which is why the tables are data rather than markup.
  */
-const SIZES = [
-  { size: 'XS', bust: '78–82', waist: '60–64', hip: '86–90' },
-  { size: 'S', bust: '83–87', waist: '65–69', hip: '91–95' },
-  { size: 'M', bust: '88–92', waist: '70–74', hip: '96–100' },
-  { size: 'L', bust: '93–98', waist: '75–80', hip: '101–106' },
-  { size: 'XL', bust: '99–104', waist: '81–86', hip: '107–112' },
+
+const SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const
+
+const TOPS = [
+  { label: 'Bust', values: ['34', '36', '38', '40', '42'] },
+  { label: 'Waist', values: ['26', '28', '30', '32', '34'] },
+  { label: 'Hips', values: ['35', '37', '39', '41', '43'] },
+  { label: 'Shoulder', values: ['14', '14.5', '15', '15.5', '16'] },
+  { label: 'Armhole', values: ['15.5', '16', '16.5', '17', '17.5'] },
 ]
+
+const BOTTOMS = [
+  { label: 'Waist', values: ['26', '28', '30', '32', '34'] },
+  { label: 'Hips', values: ['35', '37', '39', '41', '43'] },
+]
+
+function MeasurementTable({
+  caption,
+  rows,
+}: {
+  caption: string
+  rows: Array<{ label: string; values: string[] }>
+}) {
+  return (
+    <div className="mt-5">
+      <p className="label-caps text-ink">{caption}</p>
+      {/*
+        Six columns do not fit a phone, so the table scrolls inside its own
+        box rather than pushing the page sideways.
+      */}
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[22rem] text-sm">
+          <thead>
+            <tr className="border-b border-rule">
+              <th className="label-caps py-2 text-left font-normal">Size</th>
+              {SIZES.map((size) => (
+                <th key={size} className="label-caps py-2 text-center font-normal">
+                  {size}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label} className="border-b border-hairline last:border-0">
+                <td className="py-2.5 font-medium">{row.label}</td>
+                {row.values.map((value, i) => (
+                  <td
+                    key={SIZES[i]}
+                    className="py-2.5 text-center tabular-nums text-ink-soft"
+                  >
+                    {value}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 
 export function SizeGuide() {
   const [open, setOpen] = useState(false)
@@ -72,7 +137,7 @@ export function SizeGuide() {
                   Size guide
                 </h2>
                 <p className="mt-1 text-sm text-ink-soft">
-                  Body measurements in centimetres.
+                  Body measurements, in inches.
                 </p>
               </div>
               <button
@@ -86,28 +151,8 @@ export function SizeGuide() {
               </button>
             </div>
 
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-rule text-left">
-                    <th className="label-caps py-2 font-normal">Size</th>
-                    <th className="label-caps py-2 font-normal">Bust</th>
-                    <th className="label-caps py-2 font-normal">Waist</th>
-                    <th className="label-caps py-2 font-normal">Hip</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SIZES.map((row) => (
-                    <tr key={row.size} className="border-b border-hairline last:border-0">
-                      <td className="py-2.5 font-medium">{row.size}</td>
-                      <td className="py-2.5 text-ink-soft">{row.bust}</td>
-                      <td className="py-2.5 text-ink-soft">{row.waist}</td>
-                      <td className="py-2.5 text-ink-soft">{row.hip}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <MeasurementTable caption="Tops & dresses" rows={TOPS} />
+            <MeasurementTable caption="Bottoms" rows={BOTTOMS} />
 
             <div className="mt-6 space-y-2 text-sm text-ink-soft">
               <p className="label-caps text-ink">How to measure</p>
@@ -120,8 +165,16 @@ export function SizeGuide() {
                 the navel.
               </p>
               <p>
-                <span className="text-ink">Hip</span> — around the fullest part, roughly 20 cm
-                below the waist.
+                <span className="text-ink">Hips</span> — around the fullest part, roughly eight
+                inches below the waist.
+              </p>
+              <p>
+                <span className="text-ink">Shoulder</span> — across the back, from the edge of one
+                shoulder to the other.
+              </p>
+              <p>
+                <span className="text-ink">Armhole</span> — around the arm where it meets the
+                shoulder.
               </p>
               <p className="pt-2">
                 Between two sizes? Our cuts run relaxed, so most people take the smaller. Write to
