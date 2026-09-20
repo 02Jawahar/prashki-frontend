@@ -564,6 +564,7 @@ function MethodForm({
     maxDays: method?.maxDays != null ? String(method.maxDays) : '',
     isCod: method?.isCod ?? false,
     codFee: String((method?.codFee ?? 0) / 100),
+    carrierRule: method?.carrierRule ?? '',
     provider: method?.provider ?? '',
     isActive: method?.isActive ?? true,
     position: String(method?.position ?? 0),
@@ -592,6 +593,8 @@ function MethodForm({
       isCod: form.isCod,
       codFee: form.isCod ? paise(form.codFee) : 0,
       // Empty means booked by hand, which the API stores as null.
+      // The select only ever holds these three, but its value is a string.
+      carrierRule: (form.carrierRule || null) as 'cheapest' | 'fastest' | null,
       provider: form.provider || null,
       isActive: form.isActive,
       position: Number(form.position || 0),
@@ -624,7 +627,40 @@ function MethodForm({
           />
         </Field>
 
-        <Field label="Rate (₹)" htmlFor="m-rate" required hint="Enter 0 for free delivery.">
+        {/*
+          Whether the carrier prices this method, or the studio does.
+
+          This existed in the database from the start with nothing able to set
+          it, so every store ran on flat rates however its carrier was
+          configured — and the address was never checked, because checking is
+          a side effect of asking for rates.
+        */}
+        <Field
+          label="Priced by"
+          htmlFor="m-carrier-rule"
+          hint="Asking the carrier also checks the address is real."
+        >
+          <Select
+            id="m-carrier-rule"
+            value={form.carrierRule}
+            onChange={(event) => setForm((f) => ({ ...f, carrierRule: event.target.value }))}
+          >
+            <option value="">The flat rate below</option>
+            <option value="cheapest">The cheapest courier that serves the address</option>
+            <option value="fastest">The quickest courier that serves the address</option>
+          </Select>
+        </Field>
+
+        <Field
+          label={form.carrierRule ? 'Fallback rate (₹)' : 'Rate (₹)'}
+          htmlFor="m-rate"
+          required
+          hint={
+            form.carrierRule
+              ? 'Charged only when the carrier cannot be reached. 0 means free.'
+              : 'Enter 0 for free delivery.'
+          }
+        >
           <Input
             id="m-rate"
             type="number"

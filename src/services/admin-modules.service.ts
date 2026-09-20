@@ -118,6 +118,8 @@ export interface ShippingMethod {
   maxDays: number | null
   isCod: boolean
   codFee: number
+  /** null = the flat rate stands; otherwise the carrier prices this method. */
+  carrierRule: 'cheapest' | 'fastest' | null
   provider: string | null
   isActive: boolean
   position: number
