@@ -29,6 +29,8 @@ export function ParcelDefaultsCard() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [autoBook, setAutoBook] = useState(false)
+  const [autoBookBusy, setAutoBookBusy] = useState(false)
 
   const canEdit = can('settings.update')
 
@@ -36,6 +38,7 @@ export function ParcelDefaultsCard() {
     setLoading(true)
     try {
       const data = await shippingAdminService.parcelDefaults()
+      setAutoBook(await shippingAdminService.autoBook().catch(() => false))
       setSaved(data.parcelDefaults)
       setDraft({
         weightGrams: String(data.parcelDefaults.weightGrams),
@@ -188,6 +191,43 @@ export function ParcelDefaultsCard() {
               {!valid && <span className="text-xs text-danger">Every figure must be a whole number.</span>}
             </div>
           )}
+
+          {/*
+            Booking on payment sits here rather than on the method, because it
+            is one decision for the whole shop: either the studio wants a label
+            waiting when the box is packed, or it does not.
+          */}
+          <div className="mt-6 border-t border-hairline pt-5">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={autoBook}
+                disabled={!canEdit || autoBookBusy}
+                onChange={async (e) => {
+                  const next = e.target.checked
+                  setAutoBook(next)
+                  setAutoBookBusy(true)
+                  try {
+                    setAutoBook(await shippingAdminService.setAutoBook(next))
+                  } catch (err) {
+                    setAutoBook(!next)
+                    setError(err instanceof Error ? err.message : 'Could not change that')
+                  } finally {
+                    setAutoBookBusy(false)
+                  }
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="text-sm text-ink">Book with the carrier as soon as payment clears</span>
+                <span className="mt-1 block text-xs text-ink-soft">
+                  The whole order goes as one parcel and the label is ready straight away. Leave it
+                  off if pieces are made to order — an airway bill allocated weeks before the
+                  garment exists is one the courier will chase.
+                </span>
+              </span>
+            </label>
+          </div>
         </>
       )}
     </section>

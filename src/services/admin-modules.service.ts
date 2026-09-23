@@ -174,6 +174,15 @@ export const shippingAdminService = {
       )
       .then((r) => r.data),
 
+  /** Whether a paid order books itself with the carrier. */
+  autoBook: () =>
+    apiClient.get<{ autoBook: boolean }>('/admin/shipping/auto-book').then((r) => r.data.autoBook),
+
+  setAutoBook: (autoBook: boolean) =>
+    apiClient
+      .put<{ autoBook: boolean }>('/admin/shipping/auto-book', { autoBook })
+      .then((r) => r.data.autoBook),
+
   zones: () =>
     apiClient
       .get<{
