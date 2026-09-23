@@ -157,25 +157,14 @@ export function SiteHeader({ nav, storeName }: { nav: NavItem[]; storeName: stri
   return (
     <>
       {/*
-        On the homepage the whole top block floats over the films; everywhere
-        else it sits above the page as usual.
+        On the homepage the header floats over the films; everywhere else it
+        sits above the page as usual.
         
         It is fixed on the homepage whether or not it is currently transparent —
-        if it moved between fixed and flowed as the colour changed, hovering the
-        bar would shove the page down by its own height. Hover changes paint
-        only.
+        if it moved between fixed and flowed as the colour changed, hovering it
+        would shove the page down by its own height. Hover changes paint only.
       */}
       <div className={homeOverlay ? 'fixed inset-x-0 top-0 z-50' : ''}>
-        <div
-          className={`py-2 text-center transition-colors duration-300 ${
-            overHero ? 'bg-transparent text-white' : 'bg-sage-700 text-white'
-          }`}
-        >
-          <p className="label-caps text-[0.66rem]">
-            Complimentary shipping across India &middot; Made to order in 15&ndash;20 days
-          </p>
-        </div>
-
       <header
         className={`${homeOverlay ? '' : 'sticky top-0'} z-50 border-b transition-[background-color,color,box-shadow] duration-300 ${
           overHero ? 'border-transparent bg-transparent text-white' : 'bg-white text-ink'
