@@ -225,6 +225,21 @@ export const adminService = {
       .put<{ reordered: number }>(`/admin/categories/${id}/products/order`, { productIds })
       .then((r) => r.data),
 
+  /**
+   * Ask the payment gateway what became of an order's payment, when neither
+   * the browser callback nor the webhook arrived.
+   */
+  reconcilePayment: (orderId: string) =>
+    apiClient
+      .post<{
+        outcome: string
+        message: string
+        providerPaymentId?: string | null
+        amount?: number | null
+        method?: string | null
+      }>(`/admin/orders/${orderId}/reconcile-payment`, {})
+      .then((r) => r.data),
+
   deleteCategory: (id: string) =>
     apiClient.delete<{ deleted: boolean }>(`/admin/categories/${id}`).then((r) => r.data),
 

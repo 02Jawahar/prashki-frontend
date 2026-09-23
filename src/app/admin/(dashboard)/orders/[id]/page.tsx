@@ -57,9 +57,38 @@ export default function AdminOrderDetailPage() {
   const [refunds, setRefunds] = useState<
     Array<{ id: string; amount: number; status: string; reason: string | null; createdAt: string }>
   >([])
+  const [checking, setChecking] = useState(false)
+  const [reconciled, setReconciled] = useState<{
+    outcome: string
+    message: string
+    providerPaymentId?: string | null
+  } | null>(null)
+
   const [refundAmount, setRefundAmount] = useState('')
   const [refundReason, setRefundReason] = useState('')
   const [confirmingRefund, setConfirmingRefund] = useState(false)
+
+  /**
+   * Ask the gateway what became of this order's payment.
+   *
+   * Reloads on success so the whole page reflects the new status rather than
+   * just this box — the status history, the shipment panel and the badge all
+   * change together, which is what an operator needs to see before deciding
+   * to pack anything.
+   */
+  async function reconcile() {
+    setChecking(true)
+    setError(null)
+    try {
+      const result = await adminService.reconcilePayment(id)
+      setReconciled(result)
+      if (result.outcome === 'paid') await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reach the gateway')
+    } finally {
+      setChecking(false)
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -262,6 +291,50 @@ export default function AdminOrderDetailPage() {
         </div>
 
         <aside className="space-y-6">
+          {/*
+            Before the status box on purpose. An order sitting in pending
+            payment is almost always one whose confirmation never arrived
+            rather than one that was never paid, and asking the gateway is the
+            honest first move — setting the status by hand without checking is
+            how an unpaid order gets shipped.
+          */}
+          {can('order.update_status') && order.status === 'PENDING_PAYMENT' && (
+            <section className="border border-rule bg-white p-5">
+              <h2 className="label-caps mb-2">Payment</h2>
+              <p className="mb-3 text-xs text-ink-soft">
+                If the customer says they paid, ask the gateway. A closed browser tab is enough to
+                leave an order here with the money already taken.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                loading={checking}
+                onClick={() => void reconcile()}
+              >
+                Check with the gateway
+              </Button>
+              {reconciled && (
+                <p
+                  className={`mt-3 text-xs ${
+                    reconciled.outcome === 'paid'
+                      ? 'text-success'
+                      : reconciled.outcome === 'authorized' || reconciled.outcome === 'amount_mismatch'
+                        ? 'text-warning'
+                        : 'text-ink-soft'
+                  }`}
+                >
+                  {reconciled.message}
+                  {reconciled.providerPaymentId && (
+                    <span className="mt-1 block font-mono text-ink-soft">
+                      {reconciled.providerPaymentId}
+                    </span>
+                  )}
+                </p>
+              )}
+            </section>
+          )}
+
           {can('order.update_status') && options.length > 0 && (
             <section className="border border-rule bg-white p-5">
               <h2 className="label-caps mb-4">Update status</h2>
