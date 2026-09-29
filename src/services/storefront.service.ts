@@ -504,3 +504,24 @@ export function trackEvent(
 ): void {
   void apiClient.post('/analytics', { type, ...payload }).catch(() => undefined)
 }
+
+/**
+ * Consultations for a commission. Open to guests — most people asking have
+ * never bought anything yet, which is rather the point.
+ */
+export const appointmentService = {
+  book: (input: {
+    name: string
+    email: string
+    phone: string
+    /** An ISO instant, so the studio and the customer mean the same moment. */
+    preferredAt: string
+    notes?: string
+  }) =>
+    apiClient
+      .post<{ appointment: { reference: string; name: string; preferredAt: string; status: string } }>(
+        '/appointments',
+        input,
+      )
+      .then((r) => r.data.appointment),
+}
