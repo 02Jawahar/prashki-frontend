@@ -24,19 +24,19 @@ import { Ruler, X } from 'lucide-react'
  * catalogue team edits, which is why the tables are data rather than markup.
  */
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL'] as const
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'] as const
 
 const TOPS = [
-  { label: 'Bust', values: ['34', '36', '38', '40', '42'] },
-  { label: 'Waist', values: ['26', '28', '30', '32', '34'] },
-  { label: 'Hips', values: ['35', '37', '39', '41', '43'] },
-  { label: 'Shoulder', values: ['14', '14.5', '15', '15.5', '16'] },
-  { label: 'Armhole', values: ['15.5', '16', '16.5', '17', '17.5'] },
+  { label: 'Bust', values: ['32', '34', '36', '38', '40', '42', '44', '46'] },
+  { label: 'Waist', values: ['24', '26', '28', '30', '32', '34', '36', '38'] },
+  { label: 'Hip', values: ['33', '35', '37', '39', '41', '43', '45', '47'] },
+  { label: 'Shoulder', values: ['13.5', '14', '14.5', '15', '15.5', '16', '16.5', '17'] },
+  { label: 'Armhole', values: ['15', '15.5', '16', '16.5', '17', '17.5', '18', '18.5'] },
 ]
 
 const BOTTOMS = [
-  { label: 'Waist', values: ['26', '28', '30', '32', '34'] },
-  { label: 'Hips', values: ['35', '37', '39', '41', '43'] },
+  { label: 'Waist', values: ['24', '26', '28', '30', '32', '34', '36', '38'] },
+  { label: 'Hip', values: ['33', '35', '37', '39', '41', '43', '45', '47'] },
 ]
 
 /**
@@ -46,12 +46,10 @@ const BOTTOMS = [
  * knows they are a UK 12 and is looking for the row that says so, which is the
  * opposite of how they read the measurements.
  *
- * The conversions are the studio's, chosen deliberately. They sit a little
- * below what our own bust figures would suggest — our XS is 34 inches where
- * this table's XS converts as a 32 — so a customer who orders by conversion
- * alone gets a slightly roomier garment than one who orders by the tape. The
- * measurements come first on the screen for that reason: they are what
- * actually decides the fit.
+ * These line up with the measurements above rather than approximating them:
+ * a 32-inch bust is a UK 4 and an EU 32, which is exactly what our XS is. An
+ * earlier draft of this table was anchored a size out, which would have told
+ * every overseas customer to order one size small.
  */
 const REGIONS = ['US', 'UK', 'AUS', 'EU'] as const
 
@@ -62,6 +60,9 @@ const INTERNATIONAL: Record<string, string[]> = {
   M: ['6', '8', '8', '36'],
   L: ['8', '10', '10', '38'],
   XL: ['10', '12', '12', '40'],
+  XXL: ['12', '14', '14', '42'],
+  XXXL: ['14', '16', '16', '44'],
+  XXXXL: ['16', '18', '18', '46'],
 }
 
 function MeasurementTable({
@@ -79,7 +80,7 @@ function MeasurementTable({
         box rather than pushing the page sideways.
       */}
       <div className="mt-2 overflow-x-auto">
-        <table className="w-full min-w-[22rem] text-sm">
+        <table className="w-full min-w-[34rem] text-sm">
           <thead>
             <tr className="border-b border-rule">
               <th className="label-caps py-2 text-left font-normal">Size</th>
@@ -218,7 +219,7 @@ export function SizeGuide({ productName }: { productName?: string }) {
               </button>
             </div>
 
-            <MeasurementTable caption="Tops & dresses" rows={TOPS} />
+            <MeasurementTable caption="Tops, dresstops & dresses" rows={TOPS} />
             <MeasurementTable caption="Bottoms" rows={BOTTOMS} />
             <ComparisonTable />
 
