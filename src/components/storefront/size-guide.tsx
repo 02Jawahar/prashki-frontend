@@ -42,22 +42,27 @@ const BOTTOMS = [
 /**
  * What our sizes are called elsewhere.
  *
- * Derived from our own bust measurements rather than copied from any chart:
- * an XS at 34 inches is not the same garment as an XS at 32, and a table
- * borrowed from a house that cuts smaller would send every overseas customer
- * one size wrong. Each row is the nearest standard equivalent to the bust
- * figure in the table above.
+ * Read down rather than across, unlike the tables above: somebody using this
+ * knows they are a UK 12 and is looking for the row that says so, which is the
+ * opposite of how they read the measurements.
  *
- * Nearest, not exact. Sizing is not standardised between houses, so this
- * orients somebody who does not think in inches — the measurements above are
- * what actually decides the fit, which is why they come first.
+ * The conversions are the studio's, chosen deliberately. They sit a little
+ * below what our own bust figures would suggest — our XS is 34 inches where
+ * this table's XS converts as a 32 — so a customer who orders by conversion
+ * alone gets a slightly roomier garment than one who orders by the tape. The
+ * measurements come first on the screen for that reason: they are what
+ * actually decides the fit.
  */
-const INTERNATIONAL = [
-  { label: 'US', values: ['4', '6', '8', '10', '12'] },
-  { label: 'UK', values: ['8', '10', '12', '14', '16'] },
-  { label: 'AUS', values: ['8', '10', '12', '14', '16'] },
-  { label: 'EU', values: ['36', '38', '40', '42', '44'] },
-]
+const REGIONS = ['US', 'UK', 'AUS', 'EU'] as const
+
+const INTERNATIONAL: Record<string, string[]> = {
+  // US, UK, AUS, EU
+  XS: ['2', '4', '4', '32'],
+  S: ['4', '6', '6', '34'],
+  M: ['6', '8', '8', '36'],
+  L: ['8', '10', '10', '38'],
+  XL: ['10', '12', '12', '40'],
+}
 
 function MeasurementTable({
   caption,
@@ -94,6 +99,48 @@ function MeasurementTable({
                     key={SIZES[i]}
                     className="py-2.5 text-center tabular-nums text-ink-soft"
                   >
+                    {value}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Our size against the ones used elsewhere.
+ *
+ * Turned the other way round from the measurement tables above, and on
+ * purpose: a customer reading this already knows they are a UK 12 and is
+ * scanning the UK column for it, where in the tables above they know their
+ * bust and are scanning along a row.
+ */
+function ComparisonTable() {
+  return (
+    <div className="mt-5">
+      <p className="label-caps text-ink">If you shop in other sizes</p>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[20rem] text-sm">
+          <thead>
+            <tr className="border-b border-rule">
+              <th className="label-caps py-2 text-left font-normal">Size</th>
+              {REGIONS.map((region) => (
+                <th key={region} className="label-caps py-2 text-center font-normal">
+                  {region}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {SIZES.map((size) => (
+              <tr key={size} className="border-b border-hairline last:border-0">
+                <td className="py-2.5 font-medium">{size}</td>
+                {(INTERNATIONAL[size] ?? []).map((value, i) => (
+                  <td key={REGIONS[i]} className="py-2.5 text-center tabular-nums text-ink-soft">
                     {value}
                   </td>
                 ))}
@@ -173,7 +220,7 @@ export function SizeGuide({ productName }: { productName?: string }) {
 
             <MeasurementTable caption="Tops & dresses" rows={TOPS} />
             <MeasurementTable caption="Bottoms" rows={BOTTOMS} />
-            <MeasurementTable caption="If you shop in other sizes" rows={INTERNATIONAL} />
+            <ComparisonTable />
 
             <div className="mt-6 space-y-2 text-sm text-ink-soft">
               <p className="label-caps text-ink">How to measure</p>
