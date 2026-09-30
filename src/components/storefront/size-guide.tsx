@@ -39,6 +39,26 @@ const BOTTOMS = [
   { label: 'Hips', values: ['35', '37', '39', '41', '43'] },
 ]
 
+/**
+ * What our sizes are called elsewhere.
+ *
+ * Derived from our own bust measurements rather than copied from any chart:
+ * an XS at 34 inches is not the same garment as an XS at 32, and a table
+ * borrowed from a house that cuts smaller would send every overseas customer
+ * one size wrong. Each row is the nearest standard equivalent to the bust
+ * figure in the table above.
+ *
+ * Nearest, not exact. Sizing is not standardised between houses, so this
+ * orients somebody who does not think in inches — the measurements above are
+ * what actually decides the fit, which is why they come first.
+ */
+const INTERNATIONAL = [
+  { label: 'US', values: ['4', '6', '8', '10', '12'] },
+  { label: 'UK', values: ['8', '10', '12', '14', '16'] },
+  { label: 'AUS', values: ['8', '10', '12', '14', '16'] },
+  { label: 'EU', values: ['36', '38', '40', '42', '44'] },
+]
+
 function MeasurementTable({
   caption,
   rows,
@@ -86,7 +106,7 @@ function MeasurementTable({
   )
 }
 
-export function SizeGuide() {
+export function SizeGuide({ productName }: { productName?: string }) {
   const [open, setOpen] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
 
@@ -137,7 +157,7 @@ export function SizeGuide() {
                   Size guide
                 </h2>
                 <p className="mt-1 text-sm text-ink-soft">
-                  Body measurements, in inches.
+                  {productName ? `${productName} · ` : ''}Body measurements, in inches.
                 </p>
               </div>
               <button
@@ -153,6 +173,7 @@ export function SizeGuide() {
 
             <MeasurementTable caption="Tops & dresses" rows={TOPS} />
             <MeasurementTable caption="Bottoms" rows={BOTTOMS} />
+            <MeasurementTable caption="If you shop in other sizes" rows={INTERNATIONAL} />
 
             <div className="mt-6 space-y-2 text-sm text-ink-soft">
               <p className="label-caps text-ink">How to measure</p>

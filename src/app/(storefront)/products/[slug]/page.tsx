@@ -175,7 +175,7 @@ export default async function ProductDetailPage({
             />
 
             <div className="mt-4 flex items-center gap-5">
-              <SizeGuide />
+              <SizeGuide productName={product.name} />
             </div>
 
             <PinChecker />
