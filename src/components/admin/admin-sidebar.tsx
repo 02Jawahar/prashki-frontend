@@ -31,6 +31,7 @@ import {
   UserCog,
   ShieldCheck,
   ScrollText,
+  CalendarClock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
@@ -71,6 +72,12 @@ const NAV: NavGroup[] = [
       { label: 'Orders', href: '/admin/orders', icon: ShoppingCart, permission: 'order.read' },
       { label: 'Returns', href: '/admin/returns', icon: PackageOpen, permission: 'return.read' },
       { label: 'Customers', href: '/admin/customers', icon: Users, permission: 'customer.read' },
+      {
+        label: 'Consultations',
+        href: '/admin/appointments',
+        icon: CalendarClock,
+        permission: 'order.read',
+      },
     ],
   },
   {

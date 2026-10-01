@@ -51,6 +51,19 @@ export interface CreateProductInput {
   variants?: Array<{ name: string; sku: string; price?: number | null; stock: number }>
 }
 
+export interface Appointment {
+  id: string
+  reference: string
+  name: string
+  email: string
+  phone: string
+  preferredAt: string
+  notes: string | null
+  status: 'REQUESTED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+  staffNote: string | null
+  createdAt: string
+}
+
 export const adminService = {
   // ------------------------------------------------------------ dashboard
   stats: () => apiClient.get<DashboardStats>('/admin/stats').then((r) => r.data),
@@ -239,6 +252,19 @@ export const adminService = {
         method?: string | null
       }>(`/admin/orders/${orderId}/reconcile-payment`, {})
       .then((r) => r.data),
+
+  // --------------------------------------------------------- consultations
+  appointments: (status?: string) =>
+    apiClient
+      .get<{ appointments: Appointment[] }>(
+        `/admin/appointments${status ? `?status=${status}` : ''}`,
+      )
+      .then((r) => r.data.appointments),
+
+  updateAppointment: (id: string, input: { status: string; staffNote?: string }) =>
+    apiClient
+      .patch<{ appointment: Appointment }>(`/admin/appointments/${id}`, input)
+      .then((r) => r.data.appointment),
 
   deleteCategory: (id: string) =>
     apiClient.delete<{ deleted: boolean }>(`/admin/categories/${id}`).then((r) => r.data),
