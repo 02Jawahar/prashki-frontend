@@ -199,10 +199,18 @@ function Tile({
         <video
           ref={videoRef}
           src={item.video}
+          /*
+           * The attribute as well as the play() call below. WebKit has its own
+           * logic for starting a muted inline film once it is on screen, and
+           * that only engages for an element that declares autoplay — a
+           * programmatic play() alone is the path an iPhone is strictest
+           * about. This element only mounts once a film is wanted, so the
+           * attribute cannot start anything the component did not ask for.
+           */
+          autoPlay
           muted
           loop
           playsInline
-          preload="none"
           // Painting is what the poster waits for. `playing` rather than
           // `canplay`: canplay fires while the frame on screen may still be
           // nothing.

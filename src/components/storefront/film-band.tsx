@@ -43,9 +43,9 @@ export function FilmBand({ data }: { data: FilmBandData }) {
     // Autoplay can still be refused — low power mode, a data saver. The poster
     // is showing underneath either way, so a refusal costs nothing.
     //
-    // Through the helper because of `preload="none"` on the element below. On
-    // iOS that leaves it with nothing fetched and no fetch pending, so playing
-    // it runs against nothing; the helper selects the resource first.
+    // Through the helper: it waits for a frame before asking. WebKit, which
+    // is every browser on an iPhone, aborts a play issued before there is
+    // anything decoded to play.
     playVideo(videoRef.current)
   }, [])
 
@@ -102,10 +102,17 @@ export function FilmBand({ data }: { data: FilmBandData }) {
           // Attached only once the band is nearly in view.
           src={near && !reducedMotion ? data.video : undefined}
           poster={data.poster}
+          /*
+           * The attribute as well as the play() calls. WebKit starts a muted
+           * inline film of its own accord once it is on screen, but only for
+           * an element that declares autoplay — and WebKit is what every
+           * browser on an iPhone runs. The source is attached only when the
+           * band is near and motion is allowed, so this starts nothing early.
+           */
+          autoPlay
           muted={muted}
           loop
           playsInline
-          preload="none"
           onCanPlay={play}
           aria-label={data.heading || 'Studio film'}
           // Full width, its own height. The film is already the shape of the

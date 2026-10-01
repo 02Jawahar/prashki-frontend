@@ -15,9 +15,11 @@ import type { ShowcaseItem } from '@/types/api'
  *
  *   1. **Bandwidth.** Four autoplaying videos on the homepage is a lot to send
  *      to someone who scrolled past. Nothing loads until the tile is near the
- *      viewport (`preload="none"`, `src` attached on intersection), and a tile
- *      that scrolls away pauses. On a phone that is the difference between a
- *      few hundred kilobytes and several megabytes.
+ *      viewport (`src` attached on intersection), and a tile that scrolls
+ *      away pauses. On a phone that is the difference between a few hundred
+ *      kilobytes and several megabytes. Note the gate is the src, not a
+ *      `preload` hint — WebKit honours `preload="none"` strictly enough that
+ *      the film then never plays at all.
  *
  *   2. **Autoplay actually working.** Browsers only permit it muted, and
  *      without `playsInline` iOS hijacks the video to fullscreen. Both are
@@ -167,8 +169,8 @@ function ShowcaseTile({
       // Autoplay can still be refused (low power mode, a data saver). That is
       // a fine outcome — the poster is already showing underneath.
       //
-      // Through the helper: the tile carries `preload="none"` and attaches its
-      // source on intersection, which on iOS leaves nothing to play against.
+      // Through the helper: the source is attached on intersection, so there
+      // is a moment where nothing is decoded yet and WebKit refuses a play.
       playVideo(element)
     } else {
       element.pause()
@@ -196,10 +198,14 @@ function ShowcaseTile({
           // Attached only once the tile is near the viewport.
           src={visible ? item.mediaUrl : undefined}
           className="absolute inset-0 size-full object-cover"
+          // Follows `playing` rather than being unconditional: this element is
+          // mounted before it is wanted, and reduced motion must still mean a
+          // still. See the note on the film element in video-grid for why the
+          // attribute is here at all.
+          autoPlay={playing}
           muted
           loop
           playsInline
-          preload="none"
           // The poster underneath carries the alt text; this is the same
           // content moving, so it is not announced twice.
           aria-hidden
