@@ -64,6 +64,26 @@ export interface Appointment {
   createdAt: string
 }
 
+/** One WhatsApp message in a conversation with a customer. */
+export interface ConversationMessage {
+  id: string
+  direction: 'INBOUND' | 'OUTBOUND'
+  body: string
+  status: string | null
+  createdAt: string
+  sentBy: { name: string | null } | null
+}
+
+export interface Conversation {
+  messages: ConversationMessage[]
+  /**
+   * When WhatsApp stops delivering a free reply — 24 hours after the
+   * customer last wrote. Null when they never have.
+   */
+  windowClosesAt: string | null
+  canReply: boolean
+}
+
 export const adminService = {
   // ------------------------------------------------------------ dashboard
   stats: () => apiClient.get<DashboardStats>('/admin/stats').then((r) => r.data),
@@ -265,6 +285,14 @@ export const adminService = {
     apiClient
       .patch<{ appointment: Appointment }>(`/admin/appointments/${id}`, input)
       .then((r) => r.data.appointment),
+
+  conversation: (id: string) =>
+    apiClient.get<Conversation>(`/admin/appointments/${id}/messages`).then((r) => r.data),
+
+  reply: (id: string, body: string) =>
+    apiClient
+      .post<Conversation>(`/admin/appointments/${id}/messages`, { body })
+      .then((r) => r.data),
 
   deleteCategory: (id: string) =>
     apiClient.delete<{ deleted: boolean }>(`/admin/categories/${id}`).then((r) => r.data),

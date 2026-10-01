@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Mail, Phone } from 'lucide-react'
 import { adminService, type Appointment } from '@/services/admin.service'
 import { useAuth } from '@/hooks/use-auth'
+import { ConsultationThread } from '@/components/admin/consultation-thread'
 import {
   Alert,
   Button,
@@ -165,6 +166,15 @@ export default function AppointmentsPage() {
                 <p className="mt-3 text-xs text-ink-soft">
                   <span className="label-caps text-ink">Note</span> · {a.staffNote}
                 </p>
+              )}
+
+              {/*
+                Shown on every row, not only the ones waiting: a conversation
+                about a commission carries on well after the consultation is
+                confirmed, and that is exactly when the studio needs it.
+              */}
+              {canEdit && (
+                <ConsultationThread appointmentId={a.id} phone={a.phone} email={a.email} />
               )}
 
               {canEdit && a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
