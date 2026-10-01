@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Volume2, VolumeX } from 'lucide-react'
 import type { HomeSection } from '@/types/api'
+import { playVideo } from '@/lib/play-video'
 
 type FilmBandData = Extract<HomeSection, { type: 'film-band' }>
 
@@ -41,7 +42,11 @@ export function FilmBand({ data }: { data: FilmBandData }) {
   const play = useCallback(() => {
     // Autoplay can still be refused — low power mode, a data saver. The poster
     // is showing underneath either way, so a refusal costs nothing.
-    void videoRef.current?.play().catch(() => undefined)
+    //
+    // Through the helper because of `preload="none"` on the element below. On
+    // iOS that leaves it with nothing fetched and no fetch pending, so playing
+    // it runs against nothing; the helper selects the resource first.
+    playVideo(videoRef.current)
   }, [])
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Volume2, VolumeX, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatPrice } from '@/lib/money'
+import { playVideo } from '@/lib/play-video'
 import type { ShowcaseItem } from '@/types/api'
 
 /**
@@ -165,7 +166,10 @@ function ShowcaseTile({
     if (visible && playing) {
       // Autoplay can still be refused (low power mode, a data saver). That is
       // a fine outcome — the poster is already showing underneath.
-      void element.play().catch(() => undefined)
+      //
+      // Through the helper: the tile carries `preload="none"` and attaches its
+      // source on intersection, which on iOS leaves nothing to play against.
+      playVideo(element)
     } else {
       element.pause()
     }

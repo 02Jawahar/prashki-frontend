@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { HomeSection } from '@/types/api'
+import { playVideo } from '@/lib/play-video'
 
 type VideoGridData = Extract<HomeSection, { type: 'video-grid' }>
 
@@ -111,7 +112,7 @@ function Tile({
     setWanted(true)
     // The element does not exist on the first hover — mounting it is what this
     // call triggers — so the effect below starts it instead.
-    videoRef.current?.play().catch(() => undefined)
+    playVideo(videoRef.current)
   }, [reducedMotion])
 
   const stop = useCallback(() => {
@@ -125,7 +126,7 @@ function Tile({
   }, [])
 
   useEffect(() => {
-    if (wanted) videoRef.current?.play().catch(() => undefined)
+    if (wanted) playVideo(videoRef.current)
   }, [wanted])
 
   /**
