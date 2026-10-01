@@ -14,3 +14,6 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# Screenshots the browser checks produce.
+.playwright/
