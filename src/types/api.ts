@@ -249,6 +249,8 @@ export interface StoreSettings {
   'store.name'?: string
   'store.email'?: string
   'store.phone'?: string
+  /** Blank, or absent, hides the WhatsApp button rather than linking nowhere. */
+  'store.whatsapp'?: string
   'store.currency'?: string
   'store.country'?: string
   'tax.default_percent'?: number

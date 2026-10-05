@@ -5,6 +5,7 @@ import { CartProvider } from '@/hooks/use-cart'
 import { SiteHeader } from '@/components/storefront/site-header'
 import { SiteFooter } from '@/components/storefront/site-footer'
 import { CartDrawer } from '@/components/storefront/cart-drawer'
+import { WhatsAppButton } from '@/components/storefront/whatsapp-button'
 import type { NavItem, StoreSettings } from '@/types/api'
 
 const FALLBACK_NAV: NavItem[] = [{ label: 'Shop', href: '/products' }]
@@ -29,6 +30,12 @@ export default async function StorefrontLayout({ children }: { children: React.R
         <main>{children}</main>
         <SiteFooter nav={nav} settings={settings} />
         <CartDrawer />
+        {/*
+          Every storefront page, since the question a visitor wants to ask
+          arrives wherever they happen to be reading. Renders nothing until a
+          number is set in the admin.
+        */}
+        <WhatsAppButton number={settings['store.whatsapp']} />
       </CartProvider>
     </AuthProvider>
   )
